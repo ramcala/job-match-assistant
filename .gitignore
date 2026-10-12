@@ -16,4 +16,5 @@ job-match-assistant-data.json
 
 # Build/zip artifacts
 *.zip
+!job-match-assistant.zip
 dist/

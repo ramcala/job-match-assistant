@@ -2,6 +2,8 @@
 
 ![Job Match Assistant — overview](assets/overview.gif)
 
+**Live page:** https://mrinal832.github.io/job-match-assistant/  ·  **Download:** [job-match-assistant.zip](job-match-assistant.zip) (ready to load unpacked)
+
 A Chrome extension that analyses job postings against your résumé, writes a tailored cover letter,
 finds the recruiter's email, and lets you **send the application over Gmail** (or save a draft) —
 without leaving the job page. It works on LinkedIn and a dozen other job boards, pulls jobs out of
@@ -33,6 +35,8 @@ your Gmail job‑alert inbox, and keeps a local applied‑jobs tracker.
   travels between laptops. See [docs/FOLDER_SYNC.md](docs/FOLDER_SYNC.md).
 
 ## Install (from source)
+
+**Quickest:** download [job-match-assistant.zip](job-match-assistant.zip), unzip it, then do steps 2–5 below.
 
 ![Install in 5 steps](assets/setup.gif)
 
