@@ -18,6 +18,10 @@ initModeSelector();
 let currentJob, currentResult;
 let currentPostKey;
 let candidateName = 'Alex Carter';
+const PLACEHOLDER_NAMES = /^(alex carter|applicant)$/i;
+const realName = n => (n && !PLACEHOLDER_NAMES.test(String(n).trim())) ? String(n).trim() : '';
+// The default 'Alex Carter' is only a placeholder; always prefer the saved/derived real name.
+chrome.storage.local.get(['candidateName','resumeText']).then(s => { const n = realName(s.candidateName) || deriveName(s.resumeText); if (n) candidateName = n; });
 function deriveName(resumeText){ const line=(resumeText||'').split(/\n/).map(x=>x.trim()).find(Boolean)||''; const name=line.split(/[\u2013\u2014\-|,:]/)[0].trim(); return /^[A-Za-z][A-Za-z.'\- ]{1,48}$/.test(name)&&name.split(/\s+/).length<=5?name:''; }
 function showAPIError(message) {
   const raw = String(message || 'API request failed');
@@ -86,11 +90,31 @@ async function analyze() {
   } catch (error) { $("status").textContent = error.message; }
 }
 
+let analyzeLabel;
 async function runAnalysis(job, statusId) {
+  // Visible "something is running" state on the Analyze button, plus a copy/paste fallback if a browser-session run breaks.
+  const btn = $('postAnalyze'), started = Date.now();
+  if (analyzeLabel === undefined) analyzeLabel = btn.textContent;
+  const tick = () => { const s = Math.floor((Date.now() - started) / 1000); btn.textContent = `⏳ Analyzing… ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+  btn.disabled = true; btn.classList.add('busy'); tick();
+  const timer = setInterval(tick, 1000);
+  try { return await analyzeJob(job, statusId); }
+  catch (error) {
+    const { analysisMode } = await chrome.storage.local.get('analysisMode');
+    if ((analysisMode === 'chatgpt-browser' || analysisMode === 'gemini-browser') && !/Add the job text|resume text is missing/i.test(error.message)) {
+      const details = $('pasteReply'); if (details) details.open = true;
+      $('postChatGPT')?.classList.add('primary');
+      throw new Error(`${error.message}\n\nAutomatic analysis didn't finish. Do it manually: click "Copy prompt & open ChatGPT" (or paste the prompt into Gemini), then copy the reply and paste it under "Paste reply JSON" below.`);
+    }
+    throw error;
+  }
+  finally { clearInterval(timer); btn.classList.remove('busy'); btn.textContent = analyzeLabel; btn.disabled = false; }
+}
+async function analyzeJob(job, statusId) {
     $('apiErrorBox').hidden = true;
     if(currentPostKey) await chrome.storage.session.set({[currentPostKey]:{job,pending:true}});
     const settings = await chrome.storage.local.get(["profile","apiKey","model","resumeText","resume","candidateName","analysisMode"]);
-    candidateName = settings.candidateName || deriveName(settings.resumeText) || 'Applicant';
+    candidateName = realName(settings.candidateName) || deriveName(settings.resumeText) || 'Applicant';
     if (!settings.resumeText?.trim()) throw new Error('Saved resume text is missing. Add it once in Settings; it will be reused for every job.');
     const profile = settings.resumeText.trim();
     job = inferJobDetails(job, profile);
@@ -180,8 +204,8 @@ document.querySelectorAll(".tab").forEach(btn => btn.addEventListener("click", (
 }));
 $("copy").addEventListener("click", async () => { await navigator.clipboard.writeText($("letter").value); $("copy").textContent="Copied"; });
 $("download").addEventListener("click", () => {
-  const url = URL.createObjectURL(new Blob([$("letter").value], {type:"text/plain"}));
-  chrome.downloads.download({ url, filename:`Cover_Letter_${(currentJob.company||"Company").replace(/[^a-z0-9]+/gi,"_")}.txt`, saveAs:true });
+  const url = URL.createObjectURL(new Blob([makeLetterPdf($("letter").value)], {type:"application/pdf"}));
+  chrome.downloads.download({ url, filename:`Cover_Letter_${(currentJob.company||"Company").replace(/[^a-z0-9]+/gi,"_")}.pdf`, saveAs:true });
 });
 
 { const _up = document.getElementById('usePasted'); if (_up) _up.addEventListener('click', async () => {
@@ -223,7 +247,7 @@ async function loadSelectedPost() {
     $('postTitle').value = currentJob.title || '';
     $('postCompany').value = currentJob.company || '';
     if(record.result) {
-      currentResult=record.result;candidateName=record.candidateName||candidateName;
+      currentResult=record.result;candidateName=realName(record.candidateName)||candidateName;
       const {resume}=await chrome.storage.local.get('resume');
       $('resumeInfo').textContent=resume?`Saved resume: ${resume.name}`:'No resume file saved. Add one in Settings.';
       $('getResume').disabled=!resume;
@@ -249,7 +273,7 @@ async function restoreJob(tabId) {
   currentJob = record.job;
   if (record.result) {
     currentResult = record.result;
-    candidateName = record.candidateName || candidateName;
+    candidateName = realName(record.candidateName) || candidateName;
     const { resume } = await chrome.storage.local.get('resume');
     $('resumeInfo').textContent = resume ? `Saved resume: ${resume.name}` : 'No resume file saved. Add one in Settings.';
     $('getResume').disabled = !resume;
@@ -329,11 +353,21 @@ function portalOf(job){
   if(job.source==='LinkedIn post') return 'linkedin.com';
   return job.source || '';
 }
+function aiRoleCompany(result){
+  let role=String(result?.role||'').trim(),company=String(result?.company||'').trim();
+  if(!role||!company){ // older results / models that skipped the fields: read "the <role> role at <company>" from the summary
+    const m=String(result?.summary||'').match(/(?:for|as)\s+(?:an?|the)\s+(.{3,70}?)\s+(?:role|position)\s+at\s+([A-Z][^.,;:\n]{1,60})/i);
+    if(m){role=role||m[1].trim();company=company||m[2].trim();}
+  }
+  return {role:role.slice(0,80),company:company.slice(0,80)};
+}
 function emailSubject(){
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
-  const title=clean($('postTitle')?.value)||clean(currentJob?.title)||clean(currentJob?.detectedRoles?.[0]);
-  const company=clean($('postCompany')?.value)||clean(currentJob?.company);
-  const name=clean(candidateName);
+  // The AI's reading of the post wins; fall back to the (editable) fields, then to local detection.
+  const ai=aiRoleCompany(currentResult);
+  const title=clean(ai.role)||clean($('postTitle')?.value)||clean(currentJob?.title)||clean(currentJob?.detectedRoles?.[0]);
+  const company=clean(ai.company)||clean($('postCompany')?.value)||clean(currentJob?.company);
+  const name=realName(clean(candidateName));
   const role=title?`${title}${company?` at ${company}`:''}`:(company?`a role at ${company}`:'');
   const subject=['Application'+(role?` for ${role}`:''),name].filter(Boolean).join(' – ');
   return subject.slice(0,150);
@@ -429,7 +463,7 @@ async function autoBackup(force){
 function _enc(v){ return encodeURIComponent((v||'').trim()); }
 function _slug(v){ return (v||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,''); }
 const JOB_BOARDS = [
-  { name:'LinkedIn Jobs', base:'https://www.linkedin.com/jobs/', search:(k,l)=>`https://www.linkedin.com/jobs/search/?keywords=${_enc(k)}&location=${_enc(l)}` },
+  { name:'LinkedIn Jobs', base:'https://www.linkedin.com/jobs/', search:(k,l)=>`https://www.linkedin.com/jobs/search/?keywords=${_enc(k)}&location=${_enc(l)}&f_TPR=r86400` },
   { name:'Wellfound', base:'https://wellfound.com/jobs', search:(k,l)=>`https://wellfound.com/jobs` },
   { name:'Instahyre', base:'https://www.instahyre.com/', search:(k,l)=>`https://www.instahyre.com/search-jobs/?q=${_enc(k)}` },
   { name:'Naukri', base:'https://www.naukri.com/', search:(k,l)=>`https://www.naukri.com/${_slug(k)||'jobs'}-jobs${l&&l.trim()?('-in-'+_slug(l)):''}` },

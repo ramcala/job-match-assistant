@@ -73,7 +73,7 @@
       <button id="postChatGPT" type="button">Copy prompt &amp; open ChatGPT</button>
       <small>Uses your browser session. Paste the copied prompt in ChatGPT; results stay there.</small>
       <p id="postStatus" class="status" role="status"></p>
-      <details><summary>Paste reply JSON (if the reply didn't come back automatically)</summary>
+      <details id="pasteReply"><summary>Paste reply JSON (if the reply didn't come back automatically)</summary>
         <p>Copy the whole reply from the ChatGPT/Gemini tab and paste it here — the JSON is extracted automatically.</p>
         <textarea id="pasteReply" placeholder='Paste the ChatGPT/Gemini reply or its JSON here'></textarea>
         <button id="usePasted" type="button">Use pasted reply</button>
@@ -100,7 +100,7 @@
       </div>
       <div id="letterPanel" class="card panel hidden">
         <textarea id="letter"></textarea>
-        <div class="row"><button id="copy">Copy</button><button id="download">Download .txt</button></div>
+        <div class="row"><button id="copy">Copy</button><button id="download">Download PDF</button></div>
       </div>
       <div class="card apply-box">
         <p id="resumeInfo"></p>
@@ -136,6 +136,7 @@
     </section>
     <p class="supportline">Free &amp; open source &middot; <a href="https://github.com/sponsors/ramcala" target="_blank" rel="noopener">&#9829; Sponsor</a> &middot; <a href="https://ko-fi.com/ramcala" target="_blank" rel="noopener">Ko-fi</a> &middot; <a href="https://www.buymeacoffee.com/ramcala" target="_blank" rel="noopener">Coffee</a></p>
   </main>
+  <script src="letter-pdf.js"></script>
   <script src="job-details.js"></script>
   <script src="folder-sync.js"></script>
   <script src="popup.js"></script>

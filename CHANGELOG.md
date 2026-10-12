@@ -2,6 +2,20 @@
 
 All notable changes are listed newest first. Versions match `manifest.json`.
 
+## v1.48.0 — Cover letter as PDF
+- **Download** now saves the cover letter as a **PDF** (A4, wrapped, multi-page) instead of a .txt file, using a small built-in PDF writer — no new library or permission.
+
+## v1.47.5 — Clear progress while analyzing
+- The **Analyze selected post** button now shows a pulsing **⏳ Analyzing… m:ss** timer while a run (including Gemini/ChatGPT browser sessions) is in progress.
+- If a browser-session analysis fails, the popup explains how to finish manually — copy the prompt, paste it into the chat, then paste the reply under **Paste reply JSON** (that section opens automatically).
+
+## v1.47.4 — LinkedIn past-day search
+- The **LinkedIn Jobs** search shortcut now shows only jobs posted in the **past 24 hours**.
+
+## v1.47.3 — Subject uses the AI's role and company
+- The AI analysis now returns the **role** and **company** it inferred from the post, and the email subject uses them (e.g. `Application for Engineering Manager at Aurora Energy Research – Ram Pratap`) instead of "a role at …". Older results fall back to reading the summary.
+- The subject no longer shows the placeholder name "Alex Carter"; it uses your saved or résumé-derived name.
+
 ## v1.47.2 — Old applied jobs get LinkedIn ids
 - Applied jobs saved earlier (or restored from a backup / the portable folder file) are matched too: their LinkedIn job/post id is filled in from the saved URL the first time a LinkedIn page checks.
 

@@ -17,6 +17,7 @@ Manifest V3 extension, no build step, no runtime dependencies. Edit files and re
 | `content.js` / `job-details.js` | Page job extraction + email/role inference |
 | `resume-extract.js` | PDF (pdf.js) / DOCX text extraction with column ordering |
 | `folder-sync.js` | File System Access portable‑folder sync (options + popup) |
+| `letter-pdf.js` | Tiny dependency-free PDF writer used by the cover-letter download |
 | `gmail-ui.js` | Gmail connect/compose/review/send UI wiring |
 | `lib/` | Bundled pdf.js (legacy UMD build) |
 

@@ -9,7 +9,7 @@ const node=id=>{
 let clipboard='',opened,downloaded;
 let settings={resume:{name:'resume.pdf',data:'data:application/pdf;base64,JVBERg=='},resumeText:'Candidate with Python and Terraform experience.',candidateName:'Test Candidate'};
 const records={};
-const context=vm.createContext({document:{getElementById:node,querySelectorAll:()=>[],body:{style:{}}},location:{search:''},URLSearchParams,URL,Blob,console,navigator:{clipboard:{writeText:async text=>clipboard=text}},chrome:{storage:{local:{get:async()=>settings,set:async s=>Object.assign(settings,s)},session:{get:async()=>records,set:async s=>Object.assign(records,s),remove:async()=>{}}},runtime:{openOptionsPage(){}},tabs:{query:async()=>[],create:async data=>opened=data},downloads:{download:async data=>downloaded=data}}});
+const context=vm.createContext({setInterval,clearInterval,document:{getElementById:node,querySelectorAll:()=>[],body:{style:{}}},location:{search:''},URLSearchParams,URL,Blob,console,navigator:{clipboard:{writeText:async text=>clipboard=text}},chrome:{storage:{local:{get:async()=>settings,set:async s=>Object.assign(settings,s)},session:{get:async()=>records,set:async s=>Object.assign(records,s),remove:async()=>{}}},runtime:{openOptionsPage(){}},tabs:{query:async()=>[],create:async data=>opened=data},downloads:{download:async data=>downloaded=data}}});
 vm.runInContext(source('job-details.js'),context);
 vm.runInContext(source('popup.js'),context);
 (async()=>{
