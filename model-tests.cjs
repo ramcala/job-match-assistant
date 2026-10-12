@@ -1,0 +1,40 @@
+const vm=require('node:vm'),fs=require('node:fs'),assert=require('node:assert/strict');
+const src=name=>fs.readFileSync(`${__dirname}/${name}`,'utf8');
+let sent,reply;
+const bg=vm.createContext({importScripts(){},AbortSignal,chrome:{storage:{local:{setAccessLevel(){}},session:{get:async()=>({}),set:async()=>{},remove:async()=>{}}},tabs:{onRemoved:{addListener(){}},get:async()=>({}),update:async()=>{},create:async()=>({id:1})},runtime:{onMessage:{addListener(){}},getURL:p=>'chrome-extension://test/'+p}},fetch:async(url,request)=>{sent={url,request};return reply;}});
+vm.runInContext(src('background.js'),bg);
+const response=(status,error,retry=null)=>({ok:status===200,status,headers:{get:()=>retry},json:async()=>error});
+(async()=>{
+ reply=response(429,{error:{code:'insufficient_quota',message:'Check credits'}});
+ await assert.rejects(vm.runInContext("listModels('test-key')",bg),/quota or billing limit/);
+ reply=response(429,{error:{code:'rate_limit_exceeded',message:'Too many requests'}},'30');
+ await assert.rejects(vm.runInContext("listModels('test-key')",bg),/Retry-After: 30/);
+ reply=response(429,{});
+ await assert.rejects(vm.runInContext("listModels('test-key')",bg),/may be rate limiting or exhausted quota/);
+ reply=response(200,{data:[{id:'model-b'},{id:'model-a'},{id:'model-b'}]});
+ assert.deepEqual(Array.from(await vm.runInContext("listModels('test-key')",bg)),['model-a','model-b']);
+ assert.equal(sent.url,'https://api.openai.com/v1/models');assert.equal(sent.request.body,undefined);
+ reply=response(200,{output_text:JSON.stringify({score:70,matchedSkills:[],missingSkills:[],summary:'test',coverLetter:'test'})});
+ await vm.runInContext("callOpenAI({job:{},profile:'resume',apiKey:'test-key',model:'chosen-model'})",bg);
+ assert.equal(JSON.parse(sent.request.body).model,'chosen-model');
+ const nodes=new Map();
+ const node=id=>{if(!nodes.has(id))nodes.set(id,{value:'',children:[],hidden:false,addEventListener(t,f){this[t]=f;},replaceChildren(){this.children=[]},append(o){this.children.push(o)}});return nodes.get(id)};
+ let saved;
+ const ui=vm.createContext({document:{getElementById:node,createElement:()=>({})},chrome:{storage:{local:{get:async()=>({model:'previous-custom-model'}),set:async s=>saved=s}},runtime:{sendMessage:async()=>({ok:true,models:['new-model','previous-custom-model']})}}});
+ vm.runInContext(src('options.js'),ui);await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(node('model').value,'previous-custom-model');
+ node('apiKey').value='test-key';await node('loadModels').click();
+ assert.equal(node('model').value,'previous-custom-model');
+ node('model').value='new-model';await node('save').click();assert.equal(saved.model,'new-model');
+ node('model').value='__custom__';node('customModel').value='manual-model';await node('save').click();assert.equal(saved.model,'manual-model');
+ node('customModel').value='';await node('save').click();assert.equal(saved.model,'manual-model');assert.match(node('saved').textContent,/Enter a model ID/);
+
+ // Browser-session mode: JSON extraction from a chat-style reply, and the prompt sent to the tab.
+ const wrapped=vm.runInContext(`extractJSONFromReply('Sure thing! \`\`\`json\\n${JSON.stringify({score:65,matchedSkills:['AWS'],missingSkills:['GCP'],summary:'ok',coverLetter:'letter text'}).replace(/'/g,"\\'")}\\n\`\`\`')`,bg);
+ assert.equal(wrapped.score,65); assert.deepEqual(Array.from(wrapped.matchedSkills),['AWS']);
+ await assert.rejects(async()=>vm.runInContext("extractJSONFromReply('no json here at all')",bg),/Could not find JSON/);
+ await assert.rejects(async()=>vm.runInContext("extractJSONFromReply('```json\\n{\"score\":999,\"matchedSkills\":[],\"missingSkills\":[],\"summary\":1,\"coverLetter\":\"x\"}\\n```')",bg),/Invalid AI response/);
+ const prompt=vm.runInContext(`buildBrowserPrompt({job:{title:'DevOps Engineer',company:'Acme',location:'Remote',description:'Must know Terraform.'},profile:'Candidate profile text'})`,bg);
+ assert.match(prompt,/ONLY one fenced code block labeled json/); assert.match(prompt,/Candidate profile text/); assert.match(prompt,/Terraform/);
+ console.log('PASS: quota/rate/unknown 429 handling, Retry-After, model list, selected-model request, migration, refresh preservation, custom model save, and browser-session prompt/reply parsing.');
+})().catch(e=>{console.error(e);process.exitCode=1});

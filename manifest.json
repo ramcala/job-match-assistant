@@ -1,0 +1,114 @@
+{
+  "manifest_version": 3,
+  "name": "Job Match Assistant",
+  "version": "1.44.0",
+  "minimum_chrome_version": "127",
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.linkedin.com/*"
+      ],
+      "js": [
+        "search-posts.js",
+        "easy-apply.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://wellfound.com/*",
+        "https://*.wellfound.com/*",
+        "https://*.instahyre.com/*",
+        "https://topmate.io/*",
+        "https://*.topmate.io/*",
+        "https://*.naukri.com/*",
+        "https://*.indeed.com/*",
+        "https://*.glassdoor.com/*",
+        "https://*.glassdoor.co.in/*",
+        "https://cutshort.io/*",
+        "https://*.cutshort.io/*",
+        "https://*.hirist.tech/*",
+        "https://*.hirist.com/*",
+        "https://*.foundit.in/*",
+        "https://www.workatastartup.com/*",
+        "https://*.ycombinator.com/*",
+        "https://www.linkedin.com/jobs/*",
+        "https://remoteok.com/*",
+        "https://*.remoteok.com/*",
+        "https://remote.co/*",
+        "https://*.remote.co/*"
+      ],
+      "js": [
+        "analyze-anywhere.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "description": "Analyze jobs with your resume, write cover letters, and review and send applications using Gmail OAuth.",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting",
+    "downloads",
+    "tabs",
+    "clipboardWrite",
+    "identity"
+  ],
+  "host_permissions": [
+    "https://api.openai.com/*",
+    "https://gmail.googleapis.com/*",
+    "https://www.googleapis.com/*",
+    "https://chatgpt.com/*",
+    "https://chat.openai.com/*",
+    "https://gemini.google.com/*",
+    "https://wellfound.com/*",
+    "https://*.wellfound.com/*",
+    "https://*.instahyre.com/*",
+    "https://topmate.io/*",
+    "https://*.topmate.io/*",
+    "https://*.naukri.com/*",
+    "https://*.indeed.com/*",
+    "https://*.glassdoor.com/*",
+    "https://*.glassdoor.co.in/*",
+    "https://cutshort.io/*",
+    "https://*.cutshort.io/*",
+    "https://*.hirist.tech/*",
+    "https://*.hirist.com/*",
+    "https://*.foundit.in/*",
+    "https://www.workatastartup.com/*",
+    "https://*.ycombinator.com/*",
+    "https://api.hunter.io/*",
+    "https://api.apollo.io/*",
+    "https://api.rocketreach.co/*",
+    "https://remoteok.com/*",
+    "https://*.remoteok.com/*",
+    "https://remote.co/*",
+    "https://*.remote.co/*"
+  ],
+  "oauth2": {
+    "client_id": "REPLACE_WITH_GOOGLE_CLIENT_ID.apps.googleusercontent.com",
+    "scopes": [
+      "https://www.googleapis.com/auth/gmail.send",
+      "https://www.googleapis.com/auth/gmail.readonly",
+      "https://www.googleapis.com/auth/userinfo.email"
+    ]
+  },
+  "action": {
+    "default_title": "Analyze this job",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/16.png",
+      "48": "icons/48.png",
+      "128": "icons/128.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "options_page": "options.html",
+  "icons": {
+    "16": "icons/16.png",
+    "48": "icons/48.png",
+    "128": "icons/128.png"
+  }
+}

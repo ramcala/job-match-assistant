@@ -1,0 +1,76 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Job Match Settings</title><link rel="stylesheet" href="options.css"></head>
+<body><main><h1>Job Match Assistant</h1><p>Customize the candidate profile used for matching and cover letters.</p>
+<section><h2>Saved resume</h2>
+<p>Store one PDF, DOCX or TXT file locally (maximum 3 MB). PDF/DOCX files are saved for attaching; paste their text below for analysis. TXT files populate the text automatically.</p>
+<input id="resumeFile" type="file" accept=".pdf,.docx,.txt">
+<button id="extractResume" type="button">Generate &amp; clean résumé text from file</button>
+<p id="extractStatus" role="status"></p>
+<p id="resumeStatus" role="status">No resume saved.</p>
+<label for="resumeText">Resume text used for analysis</label><textarea id="resumeText" rows="12" maxlength="60000" placeholder="Paste the complete text from your resume here"></textarea>
+<p>Replacing the file clears the old resume text to avoid using outdated information. Click Save settings after pasting the new text.</p></section>
+<section id="openaiSection"><h2>AI model for extension analysis</h2>
+<p>Pick which analysis mode to use — Local keyword matching, OpenAI API, or ChatGPT/Gemini via browser session — from the "Analyze with" dropdown in the toolbar popup. This section configures the OpenAI API key/model used when OpenAI API mode is selected there.</p>
+<label for="apiKey">OpenAI API key</label><input id="apiKey" type="password" placeholder="sk-…">
+<label for="model">API model</label><select id="model"><option value="gpt-5-mini">gpt-5-mini (existing default)</option><option value="__custom__">Enter a custom model ID…</option></select>
+<div id="customModelRow" hidden><label for="customModel">Custom model ID</label><input id="customModel" placeholder="Exact model ID"></div>
+<button id="loadModels" type="button">Load models available to my API key</button><p id="modelStatus" role="status"></p>
+<p>Choose a text model supporting the Responses API and JSON output. The account model list also contains models for other tasks; listing does not guarantee compatibility. Loading the list does not send your resume or run generation. Click Save settings to apply your selection.</p>
+<p><a href="https://platform.openai.com/settings/organization/billing/overview" target="_blank" rel="noopener noreferrer">API billing</a> · <a href="https://platform.openai.com/usage" target="_blank" rel="noopener noreferrer">API usage</a></p>
+<p><strong>About the ChatGPT/Gemini browser-session modes:</strong> picking one of these in the popup opens a new background tab at chatgpt.com or gemini.google.com, types in your resume and the job post, submits it, and reads the reply back — no API key needed, but you must already be signed in to that site in this browser. Keep the extension popup open until it finishes (up to ~2 minutes); the AI tab is left open afterward so you can review the conversation. This automates the consumer web app rather than an official API — most providers' terms of service don't cover that, which is a risk to your own account there — and it depends on that site's current page layout, which changes without notice.</p>
+</section>
+<section><h2>Gmail connection — guided setup</h2>
+<p>Send reviewed applications and attach your saved resume directly from the extension. Permissions requested: send mail and identify your account; no inbox reading. Google does not allow apps to create an OAuth client ID or add test users through an API, so each step below opens the exact Google Cloud page in a new tab — do the step there, then return.</p>
+<p>Extension ID: <code id="gmailExtensionId"></code></p>
+<ol class="wiz">
+<li><strong>Create or select a Google Cloud project.</strong><br>
+<a class="wizbtn" href="https://console.cloud.google.com/projectcreate" target="_blank" rel="noopener noreferrer">Open: Create project &#9656;</a></li>
+<li><strong>Enable the Gmail API</strong> for that project (click the blue <em>Enable</em> button on the page that opens).<br>
+<a class="wizbtn" href="https://console.cloud.google.com/apis/library/gmail.googleapis.com" target="_blank" rel="noopener noreferrer">Open: Enable Gmail API &#9656;</a></li>
+<li><strong>Set up the consent screen and add yourself as a Test user.</strong> User type: <em>External</em>; under Audience / Test users add the Gmail address you will send from.<br>
+<a class="wizbtn" href="https://console.cloud.google.com/auth/audience" target="_blank" rel="noopener noreferrer">Open: Audience / Test users &#9656;</a></li>
+<li><strong>Create an OAuth client.</strong> Application type: <em>Web application</em>. Under "Authorized redirect URIs" add the URI below, exactly.<br>
+Authorized redirect URI: <code id="gmailRedirectUri"></code> <button id="gmailCopyRedirect" type="button">Copy</button><br>
+<a class="wizbtn" href="https://console.cloud.google.com/auth/clients" target="_blank" rel="noopener noreferrer">Open: Create OAuth client &#9656;</a></li>
+<li><strong>Paste the client ID Google shows you and save it.</strong><br>
+<label for="gmailClientId">Google OAuth client ID (Web application)</label>
+<input id="gmailClientId" placeholder="123456789-example.apps.googleusercontent.com" autocomplete="off">
+<button id="gmailSaveClient" type="button">Save client ID</button> <span id="gmailClientStatus" role="status"></span></li>
+<li><strong>Connect Gmail.</strong><br>
+<button id="gmailConnect" type="button">Connect Gmail</button> <button id="gmailDisconnect" type="button">Disconnect locally</button> <button id="gmailRefreshStatus" type="button">Refresh status</button><br>
+<span id="gmailAccountStatus" role="status"></span></li>
+</ol>
+<p class="note">Saved on this browser profile across reloads and updates; keep the same extension folder/ID (uninstalling clears settings). No client secret needed. Revoke later at <a href="https://myaccount.google.com/connections" target="_blank" rel="noopener noreferrer">Google account connections</a>. Detailed walkthrough: <a href="GMAIL_SETUP.html" target="_blank">One-time Google OAuth setup</a>. Note: while your app is in "Testing", these tokens expire about every hour, so you may need to click Connect Gmail again.</p></section>
+<section><h2>Applied jobs backup</h2>
+<label class="chk"><input id="autoBackup" type="checkbox" checked> Automatically save a backup file to your Downloads (JobMatch/applied-jobs-backup.json) whenever you mark a job applied</label>
+<p class="note">Keeps one always-current file outside Chrome, so your applied list survives a Chrome reinstall or a removed extension. Restore it anytime from the popup's Restore button. If Chrome is set to ask where to save each download, this may prompt each time.</p></section>
+<section><h2>Email finder (optional)</h2>
+<p>Adds a <strong>Find email</strong> button to each analysis. Uses <a href="https://hunter.io" target="_blank" rel="noopener noreferrer">Hunter.io</a> — sign up (free tier available), then copy your key from Hunter’s API dashboard. LinkedIn never exposes a poster’s email, so this looks up likely recruiter/company emails by company domain or name; always verify before sending.</p>
+<label for="emailFinderProvider">Provider</label><select id="emailFinderProvider"><option value="hunter">Hunter.io</option><option value="apollo">Apollo.io</option><option value="rocketreach">RocketReach</option></select>
+<label for="emailFinderKey">Hunter.io API key</label><input id="emailFinderKey" type="password" placeholder="Hunter.io API key" autocomplete="off">
+<label for="apolloKey">Apollo.io API key</label><input id="apolloKey" type="password" placeholder="Apollo.io API key" autocomplete="off">
+<label for="rocketreachKey">RocketReach API key</label><input id="rocketreachKey" type="password" placeholder="RocketReach API key" autocomplete="off">
+<p class="note">Apollo and RocketReach match a specific person, so fill the hiring contact name in the analysis before Find email. Hunter can also search by company domain alone.</p>
+</section>
+<section><h2>Easy Apply autofill (LinkedIn)</h2>
+<p>Saved answers the "⚡ Auto Easy Apply" button uses to fill LinkedIn Easy Apply forms. It fills only fields it can confidently match and <strong>stops rather than guess</strong> when a required field is blank.</p>
+<label for="eaPhone">Phone</label><input id="eaPhone" placeholder="+91-...">
+<label for="eaLocation">Current location</label><input id="eaLocation" placeholder="Gurugram, India">
+<label for="eaExperienceYears">Total years of experience</label><input id="eaExperienceYears" placeholder="e.g. 9">
+<label for="eaNotice">Notice period</label><input id="eaNotice" placeholder="e.g. 60 days">
+<label for="eaCurrentCTC">Current CTC</label><input id="eaCurrentCTC" placeholder="e.g. 45 LPA">
+<label for="eaExpectedCTC">Expected CTC</label><input id="eaExpectedCTC" placeholder="e.g. 60 LPA">
+<label for="eaWorkAuth">Authorized to work (Yes/No)</label><input id="eaWorkAuth" placeholder="Yes">
+<label class="chk"><input id="eaAutoSubmit" type="checkbox"> <span><strong>Auto-submit applications</strong> without stopping. Off by default. When on, the extension clicks Submit for you — applications are sent immediately and cannot be undone, and heavy automation can get your LinkedIn account restricted. It still refuses to submit if a required field is blank.</span></label>
+<p class="note" style="margin-top:8px">When Easy Apply pauses on a new screening question, answer it in the dialog, then click <strong>Remember my answers</strong> on the on-page card — it learns the answer for next time.</p>
+<p><button type="button" id="eaClearLearned">Clear learned answers</button> <span id="eaClearStatus" class="note"></span></p>
+</section>
+<section><h2>Job search shortcut</h2>
+<p>Used by the "Job boards" buttons in the popup to open each site pre-filled with this search. Leave blank to open each board's home page.</p>
+<label for="jobKeywords">Keywords</label><input id="jobKeywords" placeholder="e.g. backend engineer">
+<label for="jobLocation">Location</label><input id="jobLocation" placeholder="e.g. Gurugram">
+</section>
+<section><h2>Portable folder (switch laptops)</h2>
+<p>Link a folder once — ideally one inside Google&nbsp;Drive, Dropbox or OneDrive — and everything (resume, settings, applied jobs, saved emails) is saved to a file there. On another laptop, link the same synced folder and click <strong>Load from folder</strong>. This keeps your data outside Chrome so it survives a reinstall or a new machine.</p>
+<div class="fs-row"><button type="button" id="fsLink">Link folder</button><button type="button" id="fsSave">Save to folder</button><button type="button" id="fsLoad">Load from folder</button></div>
+<p id="fsStatus" class="note"></p></section>
+<button id="save">Save settings</button><span id="saved"></span><p class="note">Privacy: job and resume text go to OpenAI only in API mode, and to ChatGPT or Gemini only in the corresponding browser-session mode. Google receives your reviewed email and selected attachment when you click Send.</p></main><script src="lib/pdf.min.js"></script><script src="resume-extract.js"></script><script src="folder-sync.js"></script><script src="options.js"></script><script src="gmail-ui.js"></script></body></html>

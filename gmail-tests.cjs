@@ -1,0 +1,47 @@
+// Mocked network only. Does not connect or send to any real account.
+const vm=require('node:vm'),fs=require('node:fs'),assert=require('node:assert/strict');
+let session={},local={resume:{name:'Resume.pdf',size:4,data:'data:application/pdf;base64,JVBERg=='}},mode='success',account='sender@example.com',sendCalls=0,lastRaw,listener;
+const area=store=>({get:async key=>key===null?store:{[key]:store[key]},set:async values=>Object.assign(store,values),remove:async keys=>{for(const key of Array.isArray(keys)?keys:[keys])delete store[key];}});
+const context=vm.createContext({TextEncoder,AbortSignal,Date,crypto:require('node:crypto').webcrypto,btoa:v=>Buffer.from(v,'binary').toString('base64'),chrome:{runtime:{getManifest:()=>({oauth2:{client_id:'test.apps.googleusercontent.com'}}),getURL:p=>'chrome-extension://test/'+p,onMessage:{addListener:fn=>listener=fn}},identity:{getAuthToken:async()=>({token:'test-token',grantedScopes:['https://www.googleapis.com/auth/gmail.send']}),removeCachedAuthToken:async()=>{},clearAllCachedAuthTokens:async()=>{}},storage:{session:area(session),local:area(local)}},fetch:async(url,options)=>{
+ if(url.includes('userinfo'))return {ok:true,json:async()=>({email:account,verified_email:true})};
+ assert.equal(url,'https://gmail.googleapis.com/gmail/v1/users/me/messages/send');sendCalls++;lastRaw=JSON.parse(options.body).raw;
+ if(mode==='timeout')throw new Error('Timeout');
+ if(mode==='rejected')return {ok:false,status:403};
+ return {ok:true,json:async()=>({id:'sent-123'})};
+}});
+vm.runInContext(fs.readFileSync(`${__dirname}/gmail.js`,'utf8'),context);
+context.draft={to:'recipient@example.com',subject:'Application – DevOps Engineer',body:'Hello\nMy application: résumé.',attachResume:true};
+(async()=>{
+ let review=await vm.runInContext('prepareGmail(draft)',context);
+ assert.equal(review.from,'sender@example.com');assert.equal(review.attachment.name,'Resume.pdf');assert.equal(sendCalls,0);
+ context.reviewId=review.id;
+ const sent=await vm.runInContext('sendGmail(reviewId)',context);assert.equal(sent.messageId,'sent-123');assert.equal(sendCalls,1);
+ const mime=Buffer.from(lastRaw,'base64url').toString('utf8');
+ assert.match(mime,/To: recipient@example.com/);assert.match(mime,/filename="Resume.pdf"/);assert.match(mime,/JVBERg==/);
+ assert.match(mime,/Content-Transfer-Encoding: base64/);
+ assert.equal(local.gmailLastSend.status,'sent');
+ await assert.rejects(vm.runInContext('sendGmail(reviewId)',context),/already used/);assert.equal(sendCalls,1);
+ context.draft.to='recipient@example.com\r\nBcc: other@example.com';
+ await assert.rejects(vm.runInContext('prepareGmail(draft)',context),/one valid recipient/);
+ context.draft.to='recipient@example.com';
+ review=await vm.runInContext('prepareGmail(draft)',context);context.reviewId=review.id;account='other@example.com';
+ await assert.rejects(vm.runInContext('sendGmail(reviewId)',context),/account changed/);assert.equal(sendCalls,1);account='sender@example.com';
+ mode='timeout';await assert.rejects(vm.runInContext('sendGmail(reviewId)',context),/Delivery could not be confirmed/);
+ assert.equal(local.gmailLastSend.status,'unknown');await assert.rejects(vm.runInContext('sendGmail(reviewId)',context),/already used/);assert.equal(sendCalls,2);
+ mode='rejected';review=await vm.runInContext('prepareGmail(draft)',context);context.reviewId=review.id;
+ await assert.rejects(vm.runInContext('sendGmail(reviewId)',context),/HTTP 403/);assert.equal(local.gmailLastSend.status,'failed');
+ const rejected=listener({type:'GMAIL_SEND',reviewId:'anything'},{url:'https://www.linkedin.com/'},()=>{});assert.equal(rejected,undefined);
+ mode='success';account='sender@example.com';
+ context.ccDraft={to:'primary@example.com',cc:'one@example.com, two@example.com, primary@example.com',subject:'Application – Role',body:'Hi',attachResume:false};
+ let ccReview=await vm.runInContext('prepareGmail(ccDraft)',context);
+ assert.deepEqual(Array.from(ccReview.cc),['one@example.com','two@example.com']);
+ context.reviewId=ccReview.id;await vm.runInContext('sendGmail(reviewId)',context);
+ const ccMime=Buffer.from(lastRaw,'base64url').toString('utf8');
+ assert.match(ccMime,/To: primary@example.com/);assert.match(ccMime,/Cc: one@example.com, two@example.com/);
+ context.ccDraft.cc='bad\r\nBcc: x@example.com';
+ await assert.rejects(vm.runInContext('prepareGmail(ccDraft)',context),/one valid recipient/);
+ context.longSubject='Résumé – '.repeat(12);
+ const header=vm.runInContext('encodedSubject(longSubject)',context);
+ assert.ok(header.split('\r\n ').every(word=>word.length<=75));
+ console.log('PASS: Gmail review-before-send, account binding, MIME/attachment/Unicode encoding, injection rejection, send receipt, duplicate blocking, uncertain-delivery handling, rejected send and sender isolation.');
+})().catch(error=>{console.error(error);process.exitCode=1});

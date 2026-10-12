@@ -1,0 +1,19 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Node (tests use only built-in node; no deps expected)
+node_modules/
+npm-debug.log*
+
+# Local data / backups that should never be committed
+*.local.json
+applied-jobs-backup.json
+job-match-assistant-data.json
+
+# Build/zip artifacts
+*.zip
+dist/

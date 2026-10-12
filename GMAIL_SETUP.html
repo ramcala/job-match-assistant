@@ -1,0 +1,19 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Gmail setup</title><link rel="stylesheet" href="options.css"></head><body><main>
+<h1>Connect your Gmail account</h1>
+<p>The extension is implemented, but you must register your own Google OAuth client once. No client secret or Gmail password belongs in this extension.</p>
+<ol>
+<li>Keep the extension in its existing folder. Copy its ID from chrome://extensions or the extension Settings page.</li>
+<li>Open Google Cloud Console, select/create a project, and enable the Gmail API.</li>
+<li>Configure Google Auth Platform branding/audience (OAuth consent screen). For personal external testing, add your Gmail address as a test user.</li>
+<li>Configure data access for <code>https://www.googleapis.com/auth/gmail.send</code> and <code>https://www.googleapis.com/auth/userinfo.email</code>.</li>
+<li>Create an OAuth client of type <strong>Web application</strong>. Add the exact Authorized redirect URI shown in extension Settings (including /gmail). Google generates the client ID.</li>
+<li>Paste the generated client ID into extension Settings and click <strong>Save Gmail client ID</strong>. Do not enter a client secret. No manifest editing is needed.</li>
+<li>Reload the extension in chrome://extensions and approve new permissions if Chrome asks. Refresh LinkedIn.</li>
+<li>Open extension Settings and click <strong>Connect Gmail</strong>. Complete Google's consent screen. The connected email is displayed after verification.</li>
+</ol>
+<p>If the extension ID changes, update the authorized redirect URI in Google Cloud. Existing Chrome Extension OAuth clients cannot be used in this saved-ID flow; create a Web application client once. For distribution, maintain a stable extension ID and follow Google's OAuth verification requirements for sensitive scopes. Organization policies may restrict approval.</p>
+<h2>Send an application</h2><p>Analyze a post, enter the verified recruiter address, and choose Prepare email to send here. Edit the subject/body, choose whether to attach your saved resume, then Review email. Check From, To, attachment and content, then click Send this email. Gmail returns a message ID on success. No automatic retries are made. For uncertain delivery, check Gmail Sent before preparing another copy.</p>
+<p>Google authorization may open a Google-controlled consent screen; analysis remains in the extension toolbar popup. Sign-in uses Chrome Identity; short-lived tokens stay in extension session storage and expire. Reconnect after expiry or a browser restart. The client ID stays in local settings across reloads and updates. The app stores the last send status locally and review snapshots in session storage. It does not read your inbox. The saved resume is attached only when selected.</p>
+<p>Disconnect locally clears cached authorization. Revoke the Google grant from your Google account connections if desired.</p>
+<p>References: <a href="https://developer.chrome.com/docs/extensions/how-to/integrate/oauth">Chrome OAuth setup</a> · <a href="https://developers.google.com/workspace/gmail/api/guides/sending">Gmail sending guide</a> · <a href="https://console.cloud.google.com/">Google Cloud Console</a></p>
+</main></body></html>

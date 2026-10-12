@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Job Match Assistant — analyze, tailor, apply</title>
+<meta name="description" content="A free, open-source Chrome extension that scores jobs against your resume, writes a cover letter, finds the recruiter email, and sends the application over your own Gmail.">
+<style>
+  :root{--g:#196b45;--g2:#12543a;--dark:#15211b;--grey:#5d6761;--line:#e2e8e4;--bg:#f4f7f5;--card:#fff}
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--dark);background:var(--bg)}
+  a{color:var(--g);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .wrap{max-width:960px;margin:0 auto;padding:0 20px}
+  header.site{background:linear-gradient(135deg,var(--g),var(--g2));color:#fff;padding:14px 0;position:sticky;top:0;z-index:10}
+  header.site .wrap{display:flex;align-items:center;gap:12px}
+  .logo{width:34px;height:34px;border-radius:8px;background:#fff;color:var(--g);font-weight:800;display:flex;align-items:center;justify-content:center}
+  header.site nav{margin-left:auto;display:flex;gap:18px;flex-wrap:wrap}
+  header.site nav a{color:#eafff4}
+  .hero{text-align:center;padding:56px 0 24px}
+  .hero h1{font-size:40px;margin:0 0 10px;letter-spacing:-.5px}
+  .hero p.lead{font-size:19px;color:var(--grey);max-width:640px;margin:0 auto 22px}
+  .btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:28px}
+  .btn{display:inline-block;padding:12px 22px;border-radius:10px;font-weight:600}
+  .btn.primary{background:var(--g);color:#fff}
+  .btn.ghost{background:#fff;color:var(--g);border:1.5px solid var(--g)}
+  .shot{display:block;max-width:100%;border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 30px #0001;margin:0 auto}
+  section{padding:40px 0}
+  h2{font-size:27px;margin:0 0 18px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+  .feat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px}
+  .feat h3{margin:0 0 6px;font-size:17px}
+  .feat p{margin:0;color:var(--grey);font-size:15px}
+  .steps{counter-reset:s;list-style:none;padding:0;margin:0}
+  .steps li{position:relative;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 14px 14px 56px;margin-bottom:10px}
+  .steps li::before{counter-increment:s;content:counter(s);position:absolute;left:14px;top:50%;transform:translateY(-50%);width:28px;height:28px;border-radius:50%;background:var(--g);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center}
+  code{background:#eef3f0;padding:2px 6px;border-radius:5px;font-size:14px}
+  .block{background:#0d1f17;color:#d6f5e6;padding:14px 16px;border-radius:10px;overflow:auto;font:14px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
+  .guide{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:center;margin-bottom:34px}
+  .guide:nth-child(even) .gtext{order:2}
+  .guide img{width:100%;border:1px solid var(--line);border-radius:12px;box-shadow:0 6px 22px #0001}
+  .guide h3{margin:0 0 6px}
+  .guide p{color:var(--grey);margin:0}
+  footer{background:#0d1f17;color:#b9c9c1;padding:26px 0;text-align:center;font-size:14px}
+  footer a{color:#7fe3b4}
+  @media(max-width:640px){.hero h1{font-size:30px}.guide{grid-template-columns:1fr}.guide:nth-child(even) .gtext{order:0}}
+</style>
+</head>
+<body>
+<header class="site"><div class="wrap">
+  <span class="logo">JM</span><strong>Job Match Assistant</strong>
+  <nav>
+    <a href="#features">Features</a>
+    <a href="#install">Install</a>
+    <a href="#guides">Guides</a>
+    <a href="https://github.com/mrinal832/job-match-assistant">GitHub</a>
+  </nav>
+</div></header>
+
+<div class="wrap">
+  <div class="hero">
+    <h1>Analyze &rarr; tailor &rarr; apply</h1>
+    <p class="lead">A free, open-source Chrome extension that scores any job against your r&eacute;sum&eacute;, writes a tailored cover letter, finds the recruiter&rsquo;s email, and sends the application over <strong>your own Gmail</strong> &mdash; without leaving the page.</p>
+    <div class="btns">
+      <a class="btn primary" href="#install">Add to Chrome</a>
+      <a class="btn ghost" href="https://github.com/mrinal832/job-match-assistant">View on GitHub</a>
+    </div>
+    <img class="shot" src="assets/overview.gif" alt="Overview of Job Match Assistant">
+  </div>
+
+  <section id="features">
+    <h2>What it does</h2>
+    <div class="grid">
+      <div class="feat"><h3>Match analysis</h3><p>Score a job against your r&eacute;sum&eacute; with matched/missing skills &mdash; local, OpenAI, or your ChatGPT/Gemini tab.</p></div>
+      <div class="feat"><h3>Cover letter</h3><p>A tailored, ready-to-send letter grounded in the posting and the company&rsquo;s own description.</p></div>
+      <div class="feat"><h3>Send over Gmail</h3><p>Review-then-send from your own account, or save a draft. Recipient auto-filled from the post.</p></div>
+      <div class="feat"><h3>Find email</h3><p>Hunter, Apollo or RocketReach &mdash; cached locally so the same lookup never costs twice.</p></div>
+      <div class="feat"><h3>Easy Apply</h3><p>LinkedIn autofill that stops rather than guess, and learns new screening questions.</p></div>
+      <div class="feat"><h3>Boards + inbox</h3><p>Search a dozen job boards from one bar, and pull jobs out of your Gmail job alerts.</p></div>
+      <div class="feat"><h3>Applied tracker</h3><p>Every application logged locally, with CSV export and backup/restore.</p></div>
+      <div class="feat"><h3>Portable folder</h3><p>Link a Drive/Dropbox folder once and your data follows you to any laptop.</p></div>
+    </div>
+  </section>
+
+  <section id="install">
+    <h2>Install</h2>
+    <p><strong>Once it&rsquo;s on the Chrome Web Store</strong>, installing is one click &mdash; no developer mode. Until then, load it locally in 5 steps:</p>
+    <img class="shot" src="assets/setup.gif" alt="Install steps" style="margin-bottom:18px">
+    <ol class="steps">
+      <li>Download or clone the repository.</li>
+      <li>Open <code>chrome://extensions</code>.</li>
+      <li>Turn on <strong>Developer mode</strong> (top-right).</li>
+      <li>Click <strong>Load unpacked</strong> and select the folder with <code>manifest.json</code>.</li>
+      <li>Pin it and open <strong>Settings</strong> to add your r&eacute;sum&eacute;.</li>
+    </ol>
+    <p>Clone it:</p>
+    <div class="block">git clone https://github.com/mrinal832/job-match-assistant.git</div>
+  </section>
+
+  <section id="guides">
+    <h2>Feature guides</h2>
+
+    <div class="guide"><div class="gtext"><h3>Analyze &amp; send</h3><p>Click Analyze on any job, review the score and cover letter, confirm the recipient, and send over Gmail.</p><p><a href="docs/ANALYSIS_MODES.md">Analysis modes &rarr;</a></p></div><img src="assets/analyze-send.gif" alt="Analyze then send"></div>
+
+    <div class="guide"><div class="gtext"><h3>Connect Gmail</h3><p>Use your own Google account via an OAuth Web-application client. Review-then-send only.</p><p><a href="docs/GMAIL.md">Gmail setup &rarr;</a></p></div><img src="assets/gmail.gif" alt="Connect Gmail"></div>
+
+    <div class="guide"><div class="gtext"><h3>Find recruiter emails</h3><p>Hunter by domain, Apollo/RocketReach by name &mdash; results cached locally.</p><p><a href="docs/EMAIL_FINDER.md">Email finder &rarr;</a></p></div><img src="assets/email-finder.gif" alt="Find emails"></div>
+
+    <div class="guide"><div class="gtext"><h3>Easy Apply autofill</h3><p>Fills what it&rsquo;s sure of, pauses on blanks, and remembers new answers.</p><p><a href="docs/EASY_APPLY.md">Easy Apply &rarr;</a></p></div><img src="assets/easy-apply.gif" alt="Easy Apply"></div>
+
+    <div class="guide"><div class="gtext"><h3>Job search shortcut</h3><p>One bar searches every board; Open all launches them pre-filled.</p><p><a href="docs/JOB_BOARDS.md">Job boards &rarr;</a></p></div><img src="assets/job-search.gif" alt="Job search"></div>
+
+    <div class="guide"><div class="gtext"><h3>Portable folder</h3><p>Link a cloud-synced folder; load it on any laptop to restore everything.</p><p><a href="docs/FOLDER_SYNC.md">Portable folder &rarr;</a></p></div><img src="assets/folder-sync.gif" alt="Portable folder"></div>
+  </section>
+
+  <section>
+    <h2>Privacy</h2>
+    <p>Your r&eacute;sum&eacute; and the job text go only to the provider you pick for that run (OpenAI, or your own ChatGPT/Gemini tab); local mode sends nothing. Email is sent only through your own Gmail after you confirm. Nothing is sent to the project authors. <a href="https://github.com/mrinal832/job-match-assistant#privacy">Details &rarr;</a></p>
+  </section>
+</div>
+
+<footer>
+  <div class="wrap">
+    Open source under the GPL‑3.0 License (copyleft) &middot;
+    <a href="https://github.com/mrinal832/job-match-assistant">GitHub</a> &middot;
+    <a href="https://github.com/mrinal832/job-match-assistant/issues">Report an issue</a>
+    <br>Not affiliated with LinkedIn, Google, or any job board.
+  </div>
+</footer>
+</body>
+</html>

@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Job Match Assistant</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main>
+    <header>
+      <div class="logo">JM</div>
+      <div><h1>Job Match</h1><p>Analyze · Tailor · Apply</p></div>
+      <button id="homeBtn" class="icon" title="Home &amp; applied tracker" hidden>🏠</button>
+      <button id="settings" class="icon" title="Settings">⚙</button>
+    </header>
+
+    <div class="mode-bar">
+      <label for="analysisModeSelect">Analyze with</label>
+      <select id="analysisModeSelect">
+        <option value="local">Local keyword matching</option>
+        <option value="openai">OpenAI API</option>
+        <option value="chatgpt-browser">ChatGPT (browser session)</option>
+        <option value="gemini-browser">Gemini (browser session)</option>
+      </select>
+    </div>
+
+    <section id="apiErrorBox" class="card api-error" role="alert" hidden>
+      <strong id="apiErrorCode" class="error-code"></strong>
+      <p id="apiErrorHelp"></p>
+      <a id="apiBillingLink" href="https://platform.openai.com/settings/organization/billing/overview" target="_blank" rel="noopener noreferrer" hidden>Check API billing and credits</a>
+      <p id="apiRetryAfter"></p>
+      <details><summary>Error details</summary><pre id="apiErrorDetail"></pre></details>
+    </section>
+    <section id="empty" class="card">
+      <p id="status" class="status"></p>
+      <section class="boards">
+        <div class="applied-head"><h3>From your inbox</h3><button id="inboxRefresh" type="button">Refresh from Gmail</button></div>
+        <p id="inboxStatus" class="status"></p>
+        <input id="inboxFilter" type="text" placeholder="Filter by keyword (e.g. backend, manager)">
+        <ul id="inboxJobs" class="inbox-list"></ul>
+      </section>
+      <section class="boards">
+        <div class="applied-head"><h3>Job boards</h3><button id="boardOpenAll" type="button">Open all</button></div>
+        <div class="board-search"><input id="boardKw" type="text" placeholder="Keywords (e.g. backend engineer)"><input id="boardLoc" type="text" placeholder="Location (e.g. Gurugram)"></div>
+        <div id="jobBoards" class="board-grid"></div>
+      </section>
+      <section class="boards">
+        <div class="applied-head"><h3>Job tools</h3></div>
+        <div id="jobTools"></div>
+      </section>
+      <section id="appliedSection" class="applied-list hidden">
+        <div class="applied-head"><h3>Applied jobs (<span id="appliedCount">0</span>)</h3><div class="applied-actions"><button id="exportApplied" type="button">Export CSV</button><button id="backupApplied" type="button">Backup</button><button id="restoreApplied" type="button">Restore</button></div></div>
+        <input id="restoreFile" type="file" accept="application/json,.json" style="display:none">
+        <ul id="appliedList"></ul>
+      </section>
+    </section>
+
+    <section id="postReview" class="card hidden">
+      <h2>Selected LinkedIn post</h2>
+      <p>Analysis uses your saved resume. Role and company are detected from the post; missing details do not block analysis.</p>
+      <details><summary>Correct detected details (optional)</summary>
+      <label>Role <input id="postTitle" placeholder="Auto-detect from post"></label>
+      <label>Company <input id="postCompany" placeholder="Auto-detect from post"></label>
+      </details>
+      <label>Post text <textarea id="postText"></textarea></label>
+      <button id="postAnalyze" class="primary">Analyze selected post</button>
+      <button id="postChatGPT" type="button">Copy prompt &amp; open ChatGPT</button>
+      <small>Uses your browser session. Paste the copied prompt in ChatGPT; results stay there.</small>
+      <p id="postStatus" class="status" role="status"></p>
+      <details><summary>Paste reply JSON (if the reply didn't come back automatically)</summary>
+        <p>Copy the whole reply from the ChatGPT/Gemini tab and paste it here — the JSON is extracted automatically.</p>
+        <textarea id="pasteReply" placeholder='Paste the ChatGPT/Gemini reply or its JSON here'></textarea>
+        <button id="usePasted" type="button">Use pasted reply</button>
+        <p id="pasteStatus" class="status" role="status"></p>
+      </details>
+    </section>
+    <section id="result" class="hidden">
+      <div class="card job-head">
+        <button id="resultChatGPT" type="button">Copy prompt &amp; open ChatGPT</button>
+        <p id="chatGPTStatus" role="status"></p>
+        <span class="eyebrow">CURRENT ROLE</span>
+        <h2 id="jobTitle"></h2>
+        <p id="jobMeta"></p>
+      </div>
+      <div class="score-card">
+        <div class="score-ring"><strong id="score">0</strong><span>% match</span></div>
+        <div><h3 id="verdict">Good match</h3><p id="summary"></p></div>
+      </div>
+      <p id="matchBanner" class="banner hidden"></p>
+      <div class="tabs"><button class="tab active" data-tab="skills">Match</button><button class="tab" data-tab="letter">Cover letter</button></div>
+      <div id="skillsPanel" class="card panel">
+        <h3>Matched skills</h3><div id="matched" class="chips"></div>
+        <h3>Potential gaps</h3><div id="missing" class="chips muted"></div>
+      </div>
+      <div id="letterPanel" class="card panel hidden">
+        <textarea id="letter"></textarea>
+        <div class="row"><button id="copy">Copy</button><button id="download">Download .txt</button></div>
+      </div>
+      <div class="card apply-box">
+        <p id="resumeInfo"></p>
+        <button id="getResume" type="button">Download saved resume to attach</button>
+        <p id="resumeDownloadStatus" role="status"></p>
+        <label for="email">Recruiter / hiring email (To)</label>
+        <input id="email" type="email" placeholder="recruiter@company.com">
+        <label for="emailCc">Cc (auto-filled from post)</label>
+        <input id="emailCc" type="text" placeholder="second@company.com, third@company.com">
+        <button id="findEmail" type="button">Find email (Hunter.io)</button>
+        <p id="findEmailStatus" role="status"></p>
+        <p id="gmailAccountStatus" role="status"></p>
+        <button id="gmailSettings" type="button">Connect Gmail / account settings</button>
+        <button id="gmailCompose" class="primary" type="button">✉️ Send email</button>
+        <section id="gmailEditor" hidden>
+          <label for="gmailSubject">Subject</label><input id="gmailSubject" maxlength="150">
+          <label for="gmailBody">Email body</label><textarea id="gmailBody" maxlength="60000"></textarea>
+          <label><input id="gmailAttach" type="checkbox" checked> Attach saved resume</label>
+          <button id="gmailReview" type="button">Review email</button>
+        </section>
+        <section id="gmailReviewPanel" hidden>
+          <h3>Review before sending</h3><pre id="gmailPreview"></pre>
+          <button id="gmailEdit" type="button">Edit email</button>
+          <button id="gmailConfirm" class="primary" type="button">Send this email</button>
+        </section>
+        <p id="gmailSendStatus" role="status"></p>
+        <button id="gmail">Save as draft instead</button>
+        <small>Alternative: Create Gmail draft opens Gmail; attach the resume manually there.</small>
+      </div>
+      <button id="markApplied" type="button">✓ Mark as applied</button>
+      <p id="markAppliedStatus" role="status"></p>
+      <button id="again" class="link">Analyze again</button>
+    </section>
+  </main>
+  <script src="job-details.js"></script>
+  <script src="folder-sync.js"></script>
+  <script src="popup.js"></script>
+  <script src="gmail-ui.js"></script>
+</body>
+</html>
