@@ -1,0 +1,47 @@
+name: Build extension ZIP
+
+# Rebuild job-match-assistant.zip whenever runtime source changes, and commit it back.
+on:
+  push:
+    branches: [main]
+    paths:
+      # Only rebuild when files that actually go into the extension change.
+      - 'manifest.json'
+      - '**/*.js'
+      - 'popup.html'
+      - 'options.html'
+      - 'GMAIL_SETUP.html'
+      - 'styles.css'
+      - 'options.css'
+      - 'icons/**'
+      - 'lib/**'
+      - 'scripts/build-zip.sh'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-zip-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  zip:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build ZIP
+        run: bash scripts/build-zip.sh
+
+      - name: Commit ZIP if it changed
+        run: |
+          git config user.name "ramcala"
+          git config user.email "ramcala@duck.com"
+          git add -f job-match-assistant.zip
+          if git diff --cached --quiet; then
+            echo "ZIP unchanged — nothing to commit."
+          else
+            git commit -m "chore: rebuild extension ZIP [skip ci]"
+            git push
+          fi

@@ -43,3 +43,15 @@ committing.
 - No external runtime libraries; everything is vanilla JS so it loads unpacked with no build.
 - Injected UI uses shadow DOM and a marker attribute so the page's own scripts/observers ignore it.
 - Bump `manifest.json` `version` with any user‑visible change.
+
+## Continuous build (ZIP)
+`.github/workflows/build-zip.yml` rebuilds `job-match-assistant.zip` on every push that touches
+runtime source and commits it back. It cannot loop, for several reasons:
+- The `paths:` trigger lists only runtime files — the ZIP itself is **not** a trigger path, so the
+  bot's commit (which changes only the ZIP) never starts a new run.
+- Pushes made with the built-in `GITHUB_TOKEN` do not trigger further workflow runs.
+- The commit message carries `[skip ci]`, and the job commits only when the ZIP actually changed.
+
+One-time repo setting: **Settings → Actions → General → Workflow permissions → "Read and write
+permissions"** must be enabled so the job can push the rebuilt ZIP. Rebuild locally anytime with
+`bash scripts/build-zip.sh`.
