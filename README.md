@@ -70,7 +70,6 @@ Full step‑by‑step: [docs/SETUP.md](docs/SETUP.md).
 | LinkedIn Easy Apply | [docs/EASY_APPLY.md](docs/EASY_APPLY.md) |
 | Job search shortcut (all boards) | [docs/JOB_BOARDS.md](docs/JOB_BOARDS.md) |
 | Portable folder (switch laptops) | [docs/FOLDER_SYNC.md](docs/FOLDER_SYNC.md) |
-| Publish to Chrome Web Store | [docs/PUBLISHING.md](docs/PUBLISHING.md) |
 | Architecture & contributing | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) |
 | Guide video scripts (to record) | [docs/VIDEO_GUIDES.md](docs/VIDEO_GUIDES.md) |
 
