@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Job Match Assistant",
-  "version": "1.46.0",
+  "version": "1.47.2",
   "minimum_chrome_version": "127",
   "content_scripts": [
     {
@@ -90,7 +90,8 @@
     "scopes": [
       "https://www.googleapis.com/auth/gmail.send",
       "https://www.googleapis.com/auth/gmail.readonly",
-      "https://www.googleapis.com/auth/userinfo.email"
+      "https://www.googleapis.com/auth/userinfo.email",
+      "https://www.googleapis.com/auth/userinfo.profile"
     ]
   },
   "action": {

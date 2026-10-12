@@ -42,6 +42,10 @@
   .guide img{width:100%;border:1px solid var(--line);border-radius:12px;box-shadow:0 6px 22px #0001}
   .guide h3{margin:0 0 6px}
   .guide p{color:var(--grey);margin:0}
+  .btn.sponsor{background:#fff;color:#bf3989;border:1.5px solid #bf3989}
+  .btn.kofi{background:#29abe0;color:#fff}
+  .btn.bmc{background:#ffdd00;color:#000}
+  #support .btns{justify-content:flex-start;margin-bottom:0}
   footer{background:#0d1f17;color:#b9c9c1;padding:26px 0;text-align:center;font-size:14px}
   footer a{color:#7fe3b4}
   @media(max-width:640px){.hero h1{font-size:30px}.guide{grid-template-columns:1fr}.guide:nth-child(even) .gtext{order:0}}
@@ -54,6 +58,7 @@
     <a href="#features">Features</a>
     <a href="#install">Install</a>
     <a href="#guides">Guides</a>
+    <a href="#support">Sponsor</a>
     <a href="https://github.com/ramcala/job-match-assistant">GitHub</a>
   </nav>
 </div></header>
@@ -119,13 +124,24 @@
     <h2>Privacy</h2>
     <p>Your r&eacute;sum&eacute; and the job text go only to the provider you pick for that run (OpenAI, or your own ChatGPT/Gemini tab); local mode sends nothing. Email is sent only through your own Gmail after you confirm. Nothing is sent to the project authors. <a href="https://github.com/ramcala/job-match-assistant#privacy">Details &rarr;</a></p>
   </section>
+
+  <section id="support">
+    <h2>Support the project</h2>
+    <p>Job Match Assistant is free and open source. If it helped you land interviews, you can chip in to keep it maintained.</p>
+    <div class="btns">
+      <a class="btn sponsor" href="https://github.com/sponsors/ramcala">&#9829; Sponsor on GitHub</a>
+      <a class="btn kofi" href="https://ko-fi.com/ramcala">Support on Ko-fi</a>
+      <a class="btn bmc" href="https://www.buymeacoffee.com/ramcala">&#9749; Buy me a coffee</a>
+    </div>
+  </section>
 </div>
 
 <footer>
   <div class="wrap">
     Open source under the GPL‑3.0 License (copyleft) &middot;
     <a href="https://github.com/ramcala/job-match-assistant">GitHub</a> &middot;
-    <a href="https://github.com/ramcala/job-match-assistant/issues">Report an issue</a>
+    <a href="https://github.com/ramcala/job-match-assistant/issues">Report an issue</a> &middot;
+    <a href="https://github.com/sponsors/ramcala">Sponsor</a>
     <br>Not affiliated with LinkedIn, Google, or any job board.
   </div>
 </footer>

@@ -81,6 +81,14 @@ Email is composed in the popup and sent only through your own Gmail account afte
 final confirm. API keys and résumé text are stored in the browser's extension storage (and, if you
 link one, your portable folder). Nothing is sent to the project authors.
 
+## Support
+
+Job Match Assistant is free and open source. If it saved you time, you can help keep it maintained:
+
+[![Sponsor on GitHub](https://img.shields.io/badge/Sponsor-GitHub-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/ramcala)
+[![Support on Ko-fi](https://img.shields.io/badge/Support-Ko--fi-29abe0?logo=kofi&logoColor=white)](https://ko-fi.com/ramcala)
+[![Buy me a coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-ffdd00?logo=buymeacoffee&logoColor=black)](https://www.buymeacoffee.com/ramcala)
+
 ## License
 
 GPL‑3.0 — see [LICENSE](LICENSE). You are free to use, study, and build on it, but any version you distribute must also be open‑sourced under this same license (copyleft). Contributions welcome.

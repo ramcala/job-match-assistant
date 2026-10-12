@@ -8,19 +8,36 @@
   const supported = () => /^\/(feed|search\/results\/content|posts|in\/[^/]+\/recent-activity)/.test(location.pathname);
   const read = node => (node?.innerText || node?.textContent || '').trim();
   const own = node => node?.nodeType === 1 && !!node.closest('[data-job-match-ui]');
-  let appliedUrls = new Set(), appliedFetchedAt = 0;
+  let appliedUrls = new Set(), appliedKeys = new Set(), appliedFetchedAt = 0;
   const normUrl = u => { try { const x = new URL(u); return (x.origin + x.pathname).replace(/\/+$/, ''); } catch { return (u || '').split(/[?#]/)[0].replace(/\/+$/, ''); } };
   const cardUrl = card => { const link = card.querySelector(links), urn = card.getAttribute('data-urn') || card.getAttribute('data-id'); return link?.href || (/^urn:li:(activity|share):\d+$/.test(urn || '') ? `https://www.linkedin.com/feed/update/${urn}/` : ''); };
+  // LinkedIn's own numeric ids: job id (/jobs/view/123, currentJobId=123) or post id (urn:li:activity:123, activity-123).
+  const linkedinId = u => { const m = String(u || '').match(/currentJobId=(\d+)|\/jobs\/view\/(?:[^/?#]*-)?(\d+)|urn:li:(?:activity|share|ugcPost):(\d+)|activity-(\d+)/); const id = m && (m[1] || m[2] || m[3] || m[4]); return id ? 'li:' + id : ''; };
+  // A LinkedIn listing/feed page (no id of its own) must never count as "the job"; analysing from a feed can record the feed URL.
+  const genericLinkedIn = u => { try { const x = new URL(u); return /(^|\.)linkedin\.com$/.test(x.hostname) && !linkedinId(u); } catch { return true; } };
+  // When the URL carries a LinkedIn id, match by id only. Otherwise fall back to the exact URL, but only for non-LinkedIn pages.
+  const isApplied = u => { if (!u) return false; const id = linkedinId(u); return id ? appliedKeys.has(id) : (!genericLinkedIn(u) && appliedUrls.has(normUrl(u))); };
+  function setAppliedState(btn, applied) {
+    if (!btn) return;
+    if (btn.dataset.label === undefined) btn.dataset.label = btn.textContent;
+    btn.textContent = applied ? '✓ Applied' : btn.dataset.label;
+    btn.disabled = applied;
+    btn.title = applied ? 'You already applied to this job' : '';
+    btn.style.opacity = applied ? '.65' : '';
+    btn.style.cursor = applied ? 'default' : 'pointer';
+    if (applied) btn.style.background = '#5d6761'; else btn.style.removeProperty('background'), btn.style.background = '#196b45';
+  }
   async function refreshApplied() {
     // Content scripts can't read the protected local store, so ask the background for just the URLs.
     if (Date.now() - appliedFetchedAt < 15000) return;
     appliedFetchedAt = Date.now();
-    try { const r = await chrome.runtime.sendMessage({ type: 'APPLIED_URLS' }); if (r?.ok) appliedUrls = new Set((r.urls || []).map(normUrl)); } catch { /* extension offline/updated */ }
+    try { const r = await chrome.runtime.sendMessage({ type: 'APPLIED_URLS' }); if (r?.ok) { appliedUrls = new Set((r.urls || []).filter(u => !genericLinkedIn(u)).map(normUrl)); appliedKeys = new Set((r.urls || []).map(linkedinId).filter(Boolean)); } } catch { /* extension offline/updated */ }
   }
   function markApplied(card, span) {
-    const applied = appliedUrls.has(normUrl(cardUrl(card)));
+    const applied = isApplied(cardUrl(card));
     span.textContent = applied ? '✓ Applied' : '';
     span.style.display = applied ? 'inline-block' : 'none';
+    setAppliedState(span.getRootNode().querySelector('button'), applied);
   }
   function button(text) {
     const el=document.createElement('button');el.type='button';el.textContent=text;
@@ -133,6 +150,7 @@
     company = company.split('\n')[0].split('\u00b7')[0].trim();
     return { title: title.slice(0, 200), company: company.slice(0, 120), source: 'LinkedIn job' };
   }
+  let topAnalyze = null;
   function injectJobTop() {
     if (document.querySelector('[data-job-match-top]')) return;
     const scopes = document.querySelectorAll('.jobs-unified-top-card, .job-details-jobs-unified-top-card__container--two-pane, .jobs-details__main-content, main');
@@ -156,6 +174,7 @@
       if (!e.isTrusted) return; analyze.disabled = true; status.textContent = '';
       try { await expandJob(); await open(jobText(), location.href, jobMeta()); } catch (err) { status.textContent = err.message; } finally { analyze.disabled = false; }
     });
+    analyze.setAttribute('data-top-analyze', ''); topAnalyze = analyze;
     root.append(analyze, status);
     // Each LinkedIn action button is wrapped in its own div; find the real flex ROW that holds
     // the buttons, then insert our element as a direct child right after Save's wrapper so it sits
@@ -169,8 +188,16 @@
     while (childOfRow.parentElement && childOfRow.parentElement !== row) childOfRow = childOfRow.parentElement;
     try { row.insertBefore(el, childOfRow.nextSibling); } catch { (refBtn.parentElement || scope).appendChild(el); }
   }
+  const alive = () => { try { return !!chrome.runtime?.id; } catch { return false; } };
+  function shutdown() {
+    // The extension was reloaded/updated: this orphaned script can no longer use chrome.* APIs.
+    observer.disconnect(); clearInterval(poll); clearTimeout(scheduled);
+    window.removeEventListener('popstate', queue);
+    badge?.remove(); document.querySelectorAll('[data-job-match-button]').forEach(el => el.remove());
+  }
   async function refresh() {
-    if(isJobPage()) injectJobTop();
+    if(!alive()) return shutdown();
+    if(isJobPage()) { await refreshApplied(); injectJobTop(); if(topAnalyze?.isConnected) setAppliedState(topAnalyze, isApplied(location.href)); }
     if(!supported()) {badge?.remove();document.querySelectorAll('[data-job-match-button]').forEach(el=>el.remove());return;}
     await refreshApplied();
     makeBadge();const found=findCards();
@@ -190,18 +217,20 @@
       });
     }
     for(const card of found){const span=card.querySelector('[data-job-match-button]')?.shadowRoot?.querySelector('[data-applied]');if(span)markApplied(card,span);}
-    const version=(chrome.runtime?.getManifest?.().version)||'';
+    let version='';try{version=chrome.runtime.getManifest().version||'';}catch{/* context invalidated */}
     const message=`Job Match${version?` ${version}`:''} · ${found.length} post${found.length===1?'':'s'} detected`;
-    if(label.textContent!==message)label.textContent=message;
+    if(label&&label.textContent!==message)label.textContent=message;
   }
   function queue() {
     // Do not postpone indefinitely when a feed mutates continuously.
     if(scheduled)return;scheduled=setTimeout(()=>{scheduled=null;refresh();},250);
   }
   document.addEventListener('selectionchange',()=>{const value=window.getSelection()?.toString().trim();if(value)selection=value.slice(0,30000);});
-  new MutationObserver(records=>{if(records.some(record=>!own(record.target)))queue();}).observe(document.documentElement,{childList:true,subtree:true});
+  const observer=new MutationObserver(records=>{if(records.some(record=>!own(record.target)))queue();});
+  observer.observe(document.documentElement,{childList:true,subtree:true});
   window.addEventListener('popstate',queue);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden){appliedFetchedAt=0;queue();}});
   let previous=location.href;
-  setInterval(()=>{if(location.href!==previous){previous=location.href;queue();}},1000);
+  const poll=setInterval(()=>{if(!alive())return shutdown();if(location.href!==previous){previous=location.href;queue();}},1000);
   globalThis.__jobMatchPosts={refresh};refresh();
 })();

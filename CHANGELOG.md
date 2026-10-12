@@ -2,6 +2,21 @@
 
 All notable changes are listed newest first. Versions match `manifest.json`.
 
+## v1.47.2 — Old applied jobs get LinkedIn ids
+- Applied jobs saved earlier (or restored from a backup / the portable folder file) are matched too: their LinkedIn job/post id is filled in from the saved URL the first time a LinkedIn page checks.
+
+## v1.47.1 — Fix: every job shown as applied
+- Applied detection no longer marks every job as applied. A job with a LinkedIn id now matches **only by that id**, and generic LinkedIn pages (feed, job lists) recorded as a URL are ignored.
+
+## v1.47.0 — Sent check, smarter subject, Gmail badge
+- After **Send email**, the extension checks your Gmail **Sent** folder, confirms the message landed, reports any replies already in the thread, and **marks the job as applied**.
+- The email **subject is now dynamic**: `Application for <role> at <company> – <your name>`, built from the (editable) role and company fields; missing parts are dropped instead of showing "Open Role".
+- The Send button is disabled and reads **Sending…** while the message goes out.
+- New **Connect Gmail** button in the popup header that becomes your **Google avatar** once linked (adds the `userinfo.profile` scope; reconnect once to see the picture).
+- **Applied jobs are detected by LinkedIn's own job/post id**, and their **Analyze** button becomes a disabled "✓ Applied" on feed posts and job pages.
+- Fixed a console error on LinkedIn tabs left open after reloading the extension ("Extension context invalidated").
+- **Sponsor** links on the settings page, popup, GitHub Pages site and README.
+
 ## v1.46.0 — ATS score in the popup
 - The résumé **ATS score shows on the popup home** as a badge (score, summary, top missing keywords) with a **Check now** button, kept in sync with the Settings check.
 

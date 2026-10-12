@@ -294,7 +294,7 @@ $("gmail").addEventListener("click", () => {
   const to = $("email").value.trim();
   if (!to || !/^\S+@\S+\.\S+$/.test(to)) { $("email").focus(); return; }
   const cc = $("emailCc").value.trim();
-  const subject = `Application – ${currentJob.title || "Open Role"} – ${candidateName}`;
+  const subject = emailSubject();
   const body = `${$("letter").value}\n\nJob link: ${currentJob.url}`;
   const ccParam = cc ? `&cc=${encodeURIComponent(cc)}` : '';
   chrome.tabs.create({ url:`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}${ccParam}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}` });
@@ -329,6 +329,15 @@ function portalOf(job){
   if(job.source==='LinkedIn post') return 'linkedin.com';
   return job.source || '';
 }
+function emailSubject(){
+  const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
+  const title=clean($('postTitle')?.value)||clean(currentJob?.title)||clean(currentJob?.detectedRoles?.[0]);
+  const company=clean($('postCompany')?.value)||clean(currentJob?.company);
+  const name=clean(candidateName);
+  const role=title?`${title}${company?` at ${company}`:''}`:(company?`a role at ${company}`:'');
+  const subject=['Application'+(role?` for ${role}`:''),name].filter(Boolean).join(' – ');
+  return subject.slice(0,150);
+}
 async function recordApplied(via){
   if(!currentJob) return;
   const { appliedJobs = [] } = await chrome.storage.local.get('appliedJobs');
@@ -337,6 +346,7 @@ async function recordApplied(via){
     title: currentJob.title || '(untitled role)',
     company: currentJob.company || '',
     url: currentJob.url || '',
+    jobId: (String(currentJob.url||'').match(/currentJobId=(\d+)|\/jobs\/view\/(?:[^/?#]*-)?(\d+)|urn:li:(?:activity|share|ugcPost):(\d+)|activity-(\d+)/)||[]).slice(1).find(Boolean)||'',
     email: $('email') ? $('email').value : '',
     cc: $('emailCc') ? $('emailCc').value : '',
     score: currentResult ? currentResult.score : null,

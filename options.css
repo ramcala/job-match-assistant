@@ -3,3 +3,4 @@ select{width:100%;box-sizing:border-box;border:1px solid #cdd8d1;border-radius:9
 label.chk{font-weight:400;display:flex;gap:8px;align-items:flex-start}#autoBackup{width:auto;flex:none;margin-top:3px}#modelStatus{white-space:pre-wrap;overflow-wrap:anywhere}
 
 .wiz{padding-left:20px;margin:8px 0}.wiz li{margin:16px 0}a.wizbtn{display:inline-block;background:#196b45;color:#fff;text-decoration:none;border-radius:9px;padding:8px 14px;font-weight:700;margin-top:6px}a.wizbtn:hover{background:#105737}.wiz code{word-break:break-all}
+.support{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0 0}.sp{display:inline-block;padding:9px 16px;border-radius:9px;font-weight:700;text-decoration:none}.sp.gh{background:#fff;color:#bf3989;border:1.5px solid #bf3989}.sp.kofi{background:#29abe0;color:#fff}.sp.bmc{background:#ffdd00;color:#000}

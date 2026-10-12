@@ -544,7 +544,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   if (message.type === 'APPLIED_URLS') {
     if (!sender.tab || !/^https?:\/\//.test(sender.url || '')) return;
-    (async () => { const {appliedJobs=[]} = await chrome.storage.local.get('appliedJobs'); return {ok:true, urls: appliedJobs.map(j=>j.url).filter(Boolean)}; })().then(sendResponse).catch(error => sendResponse({ok:false,error:error.message}));
+    (async () => {
+      const {appliedJobs=[]} = await chrome.storage.local.get('appliedJobs');
+      // Older records (and ones restored from a backup / portable folder) have no jobId yet: derive it from the saved URL once.
+      let changed = false;
+      for (const j of appliedJobs) {
+        if (j.jobId || !j.url) continue;
+        const m = String(j.url).match(/currentJobId=(\d+)|\/jobs\/view\/(?:[^/?#]*-)?(\d+)|urn:li:(?:activity|share|ugcPost):(\d+)|activity-(\d+)/);
+        const id = m && (m[1] || m[2] || m[3] || m[4]);
+        if (id) { j.jobId = id; changed = true; }
+      }
+      if (changed) await chrome.storage.local.set({appliedJobs});
+      return {ok:true, urls: appliedJobs.map(j=>j.url).filter(Boolean)};
+    })().then(sendResponse).catch(error => sendResponse({ok:false,error:error.message}));
     return true;
   }
   if (!sender.url?.startsWith(chrome.runtime.getURL(''))) return;

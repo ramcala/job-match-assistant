@@ -42,7 +42,7 @@ committing.
 ## Conventions
 - No external runtime libraries; everything is vanilla JS so it loads unpacked with no build.
 - Injected UI uses shadow DOM and a marker attribute so the page's own scripts/observers ignore it.
-- Bump `manifest.json` `version` with any user‑visible change.
+- Bump `manifest.json` `version` with any user‑visible change and add a `CHANGELOG.md` entry: a **major** change (breaking or large redesign, new permissions/scopes that force users to reconnect, data-format changes) bumps the **major** number (e.g. 1.47.0 → 2.0.0); a new feature or notable improvement bumps the **minor** number (1.47.0 → 1.48.0); a very small fix (typo, tiny bug, styling tweak) bumps the **patch** number (1.47.0 → 1.47.1).
 
 ## Continuous build (ZIP)
 `.github/workflows/build-zip.yml` rebuilds `job-match-assistant.zip` on every push that touches

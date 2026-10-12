@@ -40,7 +40,7 @@ async function savedClientToken(client,interactive) {
     const redirect=chrome.identity.getRedirectURL('gmail');
     const state=crypto.randomUUID();
     const auth=new URL('https://accounts.google.com/o/oauth2/v2/auth');
-    auth.search=new URLSearchParams({client_id:client,redirect_uri:redirect,response_type:'token',scope:gmailScope+' '+gmailReadScope+' https://www.googleapis.com/auth/userinfo.email',state,prompt:'select_account consent'}).toString();
+    auth.search=new URLSearchParams({client_id:client,redirect_uri:redirect,response_type:'token',scope:gmailScope+' '+gmailReadScope+' https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',state,prompt:'select_account consent'}).toString();
     const result=await chrome.identity.launchWebAuthFlow({url:auth.href,interactive:true});
     if(!result)throw new Error('Google sign-in was cancelled.');
     const callback=new URL(result),expected=new URL(redirect),params=new URLSearchParams(callback.hash.slice(1));
@@ -62,7 +62,7 @@ async function gmailAccount(interactive=false) {
   if(!response.ok)throw new Error(`Cannot verify Gmail account (${response.status}). Reconnect in Settings.`);
   const account=await response.json();
   if(!account.email||account.verified_email===false)throw new Error('Could not verify the connected email address.');
-  return {token,email:account.email};
+  return {token,email:account.email,picture:account.picture||''};
 }
 function mailAddress(value) {
   if(typeof value!=='string'||! /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(value)||/[\r\n]/.test(value))throw new Error('Enter one valid recipient email address.');
@@ -155,7 +155,7 @@ async function sendGmail(id) {
     if(!sent.id)throw new Error('Gmail response had no message ID. Check Sent before trying again.');
     await chrome.storage.session.set({[key]:{status:'sent',messageId:sent.id}});
     await chrome.storage.local.set({gmailLastSend:{status:'sent',messageId:sent.id,to:review.to,subject:review.subject,at:Date.now()}});
-    return {messageId:sent.id};
+    return {messageId:sent.id,threadId:sent.threadId||''};
   } catch(error) {
     if(submitted) {
       await chrome.storage.session.set({[key]:{status:'unknown'}});
@@ -203,6 +203,18 @@ async function gmailApiGet(path){
   if(!response.ok)throw new Error(`Gmail read failed (HTTP ${response.status}).`);
   return response.json();
 }
+async function verifySent(messageId,threadId){
+  if(typeof messageId!=='string'||!/^[\w-]+$/.test(messageId))throw new Error('Invalid message ID.');
+  const msg=await gmailApiGet('messages/'+messageId+'?format=minimal');
+  const inSent=(msg.labelIds||[]).includes('SENT');
+  let replies=0;
+  const tid=msg.threadId||threadId;
+  if(tid&&/^[\w-]+$/.test(tid)){
+    try{const thread=await gmailApiGet('threads/'+tid+'?format=minimal');
+      replies=(thread.messages||[]).filter(m=>m.id!==messageId&&!(m.labelIds||[]).some(l=>l==='SENT'||l==='DRAFT')).length;}catch{/* replies are best-effort */}
+  }
+  return {inSent,replies};
+}
 async function fetchJobEmails(){
   const q='newer_than:21d ('+['from:linkedin.com','from:indeed.com','from:naukri.com','from:wellfound.com','from:instahyre.com','subject:"job alert"','subject:"jobs for you"','subject:"job recommendations"'].join(' OR ')+')';
   const list=await gmailApiGet('messages?maxResults=25&q='+encodeURIComponent(q));
@@ -222,15 +234,16 @@ chrome.runtime.onMessage.addListener((message,sender,reply)=>{
   const page=sender.url?.split('?')[0];
   if(page!==chrome.runtime.getURL('popup.html')&&page!==chrome.runtime.getURL('options.html'))return;
   let action;
-  if(message.type==='GMAIL_CONNECT')action=async()=>({email:(await gmailAccount(true)).email});
+  if(message.type==='GMAIL_CONNECT')action=async()=>{const a=await gmailAccount(true);return {email:a.email,picture:a.picture};};
   else if(message.type==='GMAIL_SAVE_CLIENT'&&page===chrome.runtime.getURL('options.html'))action=()=>saveGmailClient(message.clientId);
   else if(message.type==='GMAIL_DISCONNECT')action=async()=>{await clearGmailAuth();return {disconnected:true};};
   else if(message.type==='GMAIL_STATUS')action=async()=>{
     const {gmailLastSend}=await chrome.storage.local.get('gmailLastSend');
-    try{return {email:(await gmailAccount()).email,lastSend:gmailLastSend};}catch(error){return {email:null,message:error.message,lastSend:gmailLastSend};}
+    try{const a=await gmailAccount();return {email:a.email,picture:a.picture,lastSend:gmailLastSend};}catch(error){return {email:null,message:error.message,lastSend:gmailLastSend};}
   };
   else if(message.type==='GMAIL_PREPARE'&&page===chrome.runtime.getURL('popup.html'))action=()=>prepareGmail(message.draft);
   else if(message.type==='GMAIL_SEND'&&page===chrome.runtime.getURL('popup.html'))action=()=>sendGmail(message.reviewId);
+  else if(message.type==='GMAIL_VERIFY_SENT'&&page===chrome.runtime.getURL('popup.html'))action=()=>verifySent(message.messageId,message.threadId);
   else if(message.type==='FETCH_JOB_EMAILS'&&page===chrome.runtime.getURL('popup.html'))action=()=>fetchJobEmails();
   else return;
   action().then(result=>reply({ok:true,result})).catch(error=>reply({ok:false,error:error.message}));return true;
