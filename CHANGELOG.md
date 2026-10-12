@@ -2,6 +2,11 @@
 
 All notable changes are listed newest first. Versions match `manifest.json`.
 
+## v1.45.0 — ATS score
+- After saving/generating a résumé, get an **AI ATS score** (0–100) with summary, missing keywords,
+  strengths and improvements — using your selected Analyze‑with provider (OpenAI or ChatGPT/Gemini).
+- Added one‑click buttons to **external ATS checkers** (Resume Worded, Jobscan, Enhancv, SkillSyncer).
+
 ## v1.44.0 — Icons, GPL-3.0, public hygiene
 - Added extension **icons** (16/48/128) and wired them into the manifest (required by the Chrome Web Store).
 - Relicensed to **GPL-3.0** (copyleft): free to use and build on, but distributed versions must stay open source.

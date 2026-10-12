@@ -7,7 +7,21 @@
 <p id="extractStatus" role="status"></p>
 <p id="resumeStatus" role="status">No resume saved.</p>
 <label for="resumeText">Resume text used for analysis</label><textarea id="resumeText" rows="12" maxlength="60000" placeholder="Paste the complete text from your resume here"></textarea>
-<p>Replacing the file clears the old resume text to avoid using outdated information. Click Save settings after pasting the new text.</p></section>
+<p class="note">Replacing the file clears the old resume text to avoid using outdated information. Click Save settings after pasting the new text.</p>
+</section>
+<section id="atsSection"><h2>ATS score</h2>
+<p>Check how applicant-tracking-friendly your résumé is. The AI check uses whichever <strong>Analyze with</strong> mode you picked in the popup (OpenAI API, or your ChatGPT/Gemini tab).</p>
+<button type="button" id="atsCheck">Check ATS score (AI)</button>
+<p id="atsStatus" role="status"></p>
+<div id="atsResult" hidden></div>
+<p class="note">Or get a score from a dedicated site (you upload your résumé there):</p>
+<div class="fs-row">
+  <button type="button" class="ats-site" data-url="https://resumeworded.com/">Resume Worded</button>
+  <button type="button" class="ats-site" data-url="https://www.jobscan.co/">Jobscan</button>
+  <button type="button" class="ats-site" data-url="https://enhancv.com/resume-checker/">Enhancv</button>
+  <button type="button" class="ats-site" data-url="https://skillsyncer.com/">SkillSyncer</button>
+</div>
+</section>
 <section id="openaiSection"><h2>AI model for extension analysis</h2>
 <p>Pick which analysis mode to use — Local keyword matching, OpenAI API, or ChatGPT/Gemini via browser session — from the "Analyze with" dropdown in the toolbar popup. This section configures the OpenAI API key/model used when OpenAI API mode is selected there.</p>
 <label for="apiKey">OpenAI API key</label><input id="apiKey" type="password" placeholder="sk-…">

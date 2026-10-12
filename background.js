@@ -410,6 +410,65 @@ async function cleanOpenAI({ apiKey, model, text }) {
   if (!out) throw new Error("No text returned by OpenAI");
   return out.trim();
 }
+function buildAtsPrompt(text) {
+  return `You are an experienced technical recruiter and ATS (applicant tracking system) expert. Assess the RESUME below for ATS‑friendliness and overall quality. Judge formatting/parse‑ability, clear section headings, use of strong action verbs and quantified impact, relevant hard/soft skills and keywords, contact completeness, and red flags (tables/images/columns that break parsing, missing dates, typos). Do NOT invent facts about the person.
+Respond with ONLY one JSON object (no prose, no code fence) in exactly this shape:
+{"score": integer 0-100, "summary": string (2-3 sentences), "missingKeywords": string[], "strengths": string[], "improvements": string[]}
+RESUME:
+${text}`;
+}
+function atsValidate(r) {
+  if (!r || typeof r !== 'object' || !Number.isFinite(r.score) || r.score < 0 || r.score > 100) throw new Error('Invalid ATS response. Please retry.');
+  const arr = v => Array.isArray(v) ? v.filter(x => typeof x === 'string') : [];
+  return { score: Math.round(r.score), summary: typeof r.summary === 'string' ? r.summary : '', missingKeywords: arr(r.missingKeywords), strengths: arr(r.strengths), improvements: arr(r.improvements) };
+}
+function extractAtsJson(text) {
+  if (typeof text !== 'string' || !text.trim()) throw new Error('The page returned no readable reply text.');
+  const cands = [];
+  const fenceRe = /```(?:json)?\s*([\s\S]*?)```/gi; let m;
+  while ((m = fenceRe.exec(text))) cands.push(m[1]);
+  cands.push(text);
+  for (const c of cands) {
+    const a = c.indexOf('{'), b = c.lastIndexOf('}');
+    if (a < 0 || b <= a) continue;
+    for (const s of [c.slice(a, b + 1), c.slice(a, b + 1).replace(/,\s*([}\]])/g, '$1')]) {
+      try { return atsValidate(JSON.parse(s)); } catch {}
+    }
+  }
+  throw new Error('Could not read an ATS score from the reply.');
+}
+async function atsOpenAI({ apiKey, model, text }) {
+  if (!apiKey) throw new Error('Enter your OpenAI API key in Settings, or switch the Analyze-with mode.');
+  if (typeof text !== 'string' || text.trim().length < 40) throw new Error('Add your résumé text first.');
+  const response = await fetch('https://api.openai.com/v1/responses', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+    signal: AbortSignal.timeout(60000),
+    body: JSON.stringify({ model: model || 'gpt-5-mini', store: false, instructions: 'You score resumes for ATS and reply only with the requested JSON.', input: buildAtsPrompt(text) })
+  });
+  if (!response.ok) throw new Error(await describeAPIError(response));
+  const data = await response.json();
+  const out = data.output_text || data.output?.flatMap(x => x.content || []).find(x => x.type === 'output_text')?.text || '';
+  return extractAtsJson(out);
+}
+async function runBrowserAts({ provider, text }) {
+  const cfg = BROWSER_PROVIDERS[provider];
+  if (!cfg) throw new Error('Unknown provider.');
+  if (typeof text !== 'string' || text.trim().length < 40) throw new Error('Add your résumé text first.');
+  const prompt = buildAtsPrompt(text);
+  const tabId = await openProviderTab(provider);
+  const fn = provider === 'chatgpt' ? chatgptAutomationFn : geminiAutomationFn;
+  let reply = '';
+  try {
+    const results = await chrome.scripting.executeScript({ target: { tabId }, func: fn, args: [prompt] });
+    reply = (results && results[0] && results[0].result) || '';
+  } catch (error) { throw new Error(`${error.message} (The ${cfg.label} tab was left open so you can see what happened there.)`); }
+  return extractAtsJson(reply);
+}
+async function atsScore({ provider, apiKey, model, text }) {
+  if (provider === 'chatgpt' || provider === 'gemini') return runBrowserAts({ provider, text });
+  return atsOpenAI({ apiKey, model, text });
+}
 async function runBrowserClean({ provider, text }) {
   const cfg = BROWSER_PROVIDERS[provider];
   if (!cfg) throw new Error('Unknown provider.');
@@ -499,6 +558,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   if (message.type === 'BROWSER_CLEAN') {
     runBrowserClean(message).then(result => sendResponse({ ok: true, result })).catch(error => sendResponse({ ok: false, error: error.message }));
+    return true;
+  }
+  if (message.type === 'ATS_SCORE') {
+    atsScore(message).then(result => sendResponse({ ok: true, result })).catch(error => sendResponse({ ok: false, error: error.message }));
     return true;
   }
   if (message.type === 'OPENAI_CLEAN') {

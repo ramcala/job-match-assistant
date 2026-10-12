@@ -97,6 +97,7 @@ el('extractResume').addEventListener('click', async () => {
   } catch(e){ el('extractStatus').textContent='Extracted and saved. AI polish unavailable ('+e.message+') — raw text kept.'; }
   el('resumeText').value=text.slice(0,60000);
   await chrome.storage.local.set({resumeText:el('resumeText').value});
+  try { if(typeof runAts==='function') runAts(); } catch(e){}
  } catch(error){ el('extractStatus').textContent=error.message; }
  finally { el('extractResume').disabled=false; }
 });
@@ -122,3 +123,34 @@ if (_eaClear) _eaClear.addEventListener('click', async () => {
   const load = document.getElementById('fsLoad');
   if (load) load.addEventListener('click', async () => { if(!confirm('Load data from the folder? This overwrites the data on THIS laptop with the folder copy.')) return; say('Loading…'); try { const n = await window.JMFolderSync.loadAll(true); say('Loaded ' + n + ' items from folder. Reloading…'); setTimeout(() => location.reload(), 800); } catch(e){ say(e.message || 'Load failed.'); } });
 })();
+
+// ---- ATS score ----
+function renderAts(r){
+  const box=el('atsResult'); if(!box) return;
+  const esc=s=>String(s).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+  const list=(t,a)=>a&&a.length?`<p style="margin:8px 0 2px"><strong>${t}</strong></p><ul style="margin:0 0 6px 18px">${a.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:'';
+  const col=r.score>=80?'#196b45':r.score>=60?'#9a7d00':'#9d3025';
+  box.innerHTML=`<div style="display:flex;align-items:center;gap:12px;margin:8px 0"><div style="font:800 28px system-ui;color:${col}">${r.score}<span style="font-size:15px">/100</span></div><div>${esc(r.summary||'')}</div></div>`
+    +list('Missing keywords',r.missingKeywords)+list('Strengths',r.strengths)+list('Improvements',r.improvements);
+  box.hidden=false;
+}
+async function runAts(){
+  const text=(el('resumeText')?el('resumeText').value:'').trim();
+  if(text.length<40){ el('atsStatus').textContent='Add your résumé text first.'; return; }
+  const cfg=await chrome.storage.local.get(['analysisMode','apiKey','model']);
+  const mode=cfg.analysisMode||(cfg.apiKey?'openai':'local');
+  let payload;
+  if(mode==='openai'){ if(!cfg.apiKey){ el('atsStatus').textContent='Add an OpenAI key, or pick ChatGPT/Gemini in the popup, or use a site below.'; return; } payload={provider:'openai',apiKey:cfg.apiKey,model:cfg.model,text}; }
+  else if(mode==='chatgpt-browser'||mode==='gemini-browser'){ payload={provider:mode==='chatgpt-browser'?'chatgpt':'gemini',text}; }
+  else { el('atsStatus').textContent='Local mode can\'t score ATS. Pick OpenAI or ChatGPT/Gemini in the popup, or use a site below.'; return; }
+  if(el('atsCheck')) el('atsCheck').disabled=true;
+  el('atsStatus').textContent='Scoring your résumé… keep this page open (a browser session can take up to ~2 minutes).';
+  try{
+    const resp=await chrome.runtime.sendMessage({type:'ATS_SCORE',...payload});
+    if(!resp||!resp.ok) throw new Error(resp&&resp.error||'ATS check failed.');
+    renderAts(resp.result); el('atsStatus').textContent='ATS score ready.';
+  }catch(e){ el('atsStatus').textContent=e.message; }
+  finally{ if(el('atsCheck')) el('atsCheck').disabled=false; }
+}
+if(el('atsCheck')) el('atsCheck').addEventListener('click', runAts);
+if (typeof document !== 'undefined' && document.querySelectorAll) document.querySelectorAll('.ats-site').forEach(b=>b.addEventListener('click',()=>{ const u=b.dataset.url; if(u) chrome.tabs.create({url:u}); }));
