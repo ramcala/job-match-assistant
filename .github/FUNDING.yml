@@ -1,7 +1,7 @@
 # Enables the "Sponsor" button on the repo. Fill in the accounts you actually have;
 # delete or leave commented the ones you don't. Docs: https://docs.github.com/sponsors
-github: [ramcala]            # your GitHub Sponsors username(s)
-# ko_fi: your_kofi_name      # https://ko-fi.com/your_kofi_name
-# buy_me_a_coffee: your_name # https://www.buymeacoffee.com/your_name
+github: ramcala           # your GitHub Sponsors username(s)
+ko_fi: ramcala      # https://ko-fi.com/your_kofi_name
+buy_me_a_coffee: ramcala # https://www.buymeacoffee.com/ramcala
 # patreon: your_name
 # custom: ["https://paypal.me/your_name"]
