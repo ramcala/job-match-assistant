@@ -149,6 +149,7 @@ async function runAts(){
     const resp=await chrome.runtime.sendMessage({type:'ATS_SCORE',...payload});
     if(!resp||!resp.ok) throw new Error(resp&&resp.error||'ATS check failed.');
     renderAts(resp.result); el('atsStatus').textContent='ATS score ready.';
+    try{ await chrome.storage.local.set({atsScore:{...resp.result,ts:Date.now()}}); }catch(e){}
   }catch(e){ el('atsStatus').textContent=e.message; }
   finally{ if(el('atsCheck')) el('atsCheck').disabled=false; }
 }

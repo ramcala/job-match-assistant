@@ -2,6 +2,9 @@
 
 All notable changes are listed newest first. Versions match `manifest.json`.
 
+## v1.46.0 — ATS score in the popup
+- The résumé **ATS score shows on the popup home** as a badge (score, summary, top missing keywords) with a **Check now** button, kept in sync with the Settings check.
+
 ## v1.45.0 — ATS score
 - After saving/generating a résumé, get an **AI ATS score** (0–100) with summary, missing keywords,
   strengths and improvements — using your selected Analyze‑with provider (OpenAI or ChatGPT/Gemini).

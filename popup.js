@@ -170,6 +170,7 @@ async function goHome() {
   if ($('homeBtn')) $('homeBtn').hidden = true;
   try { await renderApplied(); } catch (e) {}
   try { await renderInbox(); } catch (e) {}
+  try { await renderAtsBadge(); } catch (e) {}
 }
 { const _h = $('homeBtn'); if (_h) _h.addEventListener('click', goHome); }
 document.querySelectorAll(".tab").forEach(btn => btn.addEventListener("click", () => {
@@ -569,3 +570,35 @@ if($('jobTools')) $('jobTools').addEventListener('click', e => {
   if(b && b.dataset.url) chrome.tabs.create({ url: b.dataset.url });
 });
 renderTools();
+
+// ---- ATS badge on home ----
+async function renderAtsBadge(){
+  const box=$('atsBadge'); if(!box) return;
+  const {atsScore}=await chrome.storage.local.get('atsScore');
+  if(!atsScore||!Number.isFinite(atsScore.score)){ box.textContent='Not checked yet — click Check now.'; return; }
+  const col=atsScore.score>=80?'#196b45':atsScore.score>=60?'#9a7d00':'#9d3025';
+  const esc=s=>String(s||'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+  const miss=(atsScore.missingKeywords||[]).slice(0,4).map(esc).join(', ');
+  box.innerHTML=`<span class="num" style="color:${col}">${atsScore.score}</span>/100 &middot; ${esc(atsScore.summary).slice(0,120)}`+(miss?`<br><small>Missing: ${miss}</small>`:'');
+}
+async function runAtsPopup(){
+  const box=$('atsBadge'); const btn=$('atsCheckPopup');
+  const cfg=await chrome.storage.local.get(['analysisMode','apiKey','model','resumeText']);
+  const text=(cfg.resumeText||'').trim();
+  if(text.length<40){ box.textContent='Add your résumé in Settings first.'; return; }
+  const mode=cfg.analysisMode||(cfg.apiKey?'openai':'local');
+  let payload;
+  if(mode==='openai'){ if(!cfg.apiKey){ box.textContent='Add an OpenAI key or pick ChatGPT/Gemini in Analyze with.'; return; } payload={provider:'openai',apiKey:cfg.apiKey,model:cfg.model,text}; }
+  else if(mode==='chatgpt-browser'||mode==='gemini-browser'){ payload={provider:mode==='chatgpt-browser'?'chatgpt':'gemini',text}; }
+  else { box.textContent='Local mode can\'t score ATS — pick OpenAI or ChatGPT/Gemini in Analyze with.'; return; }
+  if(btn) btn.disabled=true; box.textContent='Scoring… keep this popup open.';
+  try{
+    const resp=await chrome.runtime.sendMessage({type:'ATS_SCORE',...payload});
+    if(!resp||!resp.ok) throw new Error(resp&&resp.error||'ATS check failed.');
+    await chrome.storage.local.set({atsScore:{...resp.result,ts:Date.now()}});
+    await renderAtsBadge();
+  }catch(e){ box.textContent=e.message; }
+  finally{ if(btn) btn.disabled=false; }
+}
+if($('atsCheckPopup')) $('atsCheckPopup').addEventListener('click', runAtsPopup);
+renderAtsBadge();
