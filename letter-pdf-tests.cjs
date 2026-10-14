@@ -3,7 +3,7 @@ const ctx=vm.createContext({});vm.runInContext(fs.readFileSync(__dirname+'/lette
 const text=s=>Buffer.from(s).toString('latin1');
 let pdf=text(vm.runInContext('makeLetterPdf',ctx)('Dear Hiring Manager,\n\nI’m applying (urgently) — café 中文 \\ done.'));
 assert.match(pdf,/^%PDF-1\.4/);assert.match(pdf,/%%EOF\n$/);assert.match(pdf,/I'm applying \\\(urgently\\\) - café \?\? \\\\ done\./);
-const long=Array.from({length:400},(_,i)=>'word'+i).join(' ');
+const long=Array.from({length:800},(_,i)=>'word'+i).join(' ');
 pdf=text(vm.runInContext('makeLetterPdf',ctx)(long));assert.match(pdf,/\/Count (\d+)/);assert(Number(pdf.match(/\/Count (\d+)/)[1])>=2,'long text paginates');
 // xref offsets must point at "N 0 obj"
 const start=Number(pdf.match(/startxref\n(\d+)/)[1]);assert.equal(pdf.slice(start,start+4),'xref');
