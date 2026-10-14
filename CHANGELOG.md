@@ -2,6 +2,9 @@
 
 All notable changes are listed newest first. Versions match `manifest.json`.
 
+## v1.52.0 — Log the score on Analyze & Apply
+- When **Analyze & Apply** opens an apply page, the job is now logged to your **applied tracker with its match score** (via "analyze-apply"), using the role/company the AI inferred when available.
+
 ## v1.51.0 — Analyze+Apply and fill-on-analyze
 - **Form fill is now part of Analyze**: when the page has an application form, clicking Analyze fills it from your saved answers (no separate button needed on board pages).
 - **Analyze & Apply** button on job cards: scores the job with your selected provider (or local keyword overlap) and opens the apply page only when the score meets your **match threshold** (Settings; 0 = always). Browser-session modes always open.

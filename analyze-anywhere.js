@@ -78,6 +78,7 @@
     const arr = [...result];
     return arr.filter(c => !arr.some(o => o !== c && o.contains(c))).slice(0, 40);
   }
+  function cardTitle(card) { const h = card.querySelector(HEADING); return h ? read(h).slice(0, 140) : ""; }
   function cardUrl(card) {
     const a = card.matches('a[href]') ? card : card.querySelector('a[href]');
     return a?.href || location.href;
@@ -118,15 +119,15 @@
     box.append(label, analyze, loadAll, status); root.append(box); document.documentElement.append(el);
   }
 
-  async function analyzeAndApply(desc, url, status) {
+  async function analyzeAndApply(desc, url, status, title) {
     if (desc.length < 30) throw new Error('Not enough text to analyze.');
     status.textContent = 'Analyzing…'; status.style.color = '#334155';
     const resp = await chrome.runtime.sendMessage({ type: 'ANALYZE_JOB', job: { title: '', company: '', location: '', description: desc.slice(0, 30000), url } });
     if (!resp || !resp.ok) throw new Error((resp && resp.error) || 'Analysis failed.');
-    if (resp.needsPopup) { await open(desc, url); maybeFillForm(); window.open(url, '_blank', 'noopener'); status.style.color = '#334155'; status.textContent = 'Opened analysis + apply (browser mode can\'t gate on score).'; return; }
+    if (resp.needsPopup) { await open(desc, url); maybeFillForm(); window.open(url, '_blank', 'noopener'); try { chrome.runtime.sendMessage({ type: 'RECORD_APPLIED', job: { title: title || '', company: '', url, score: null, via: 'analyze-apply' } }); } catch (e) {} status.style.color = '#334155'; status.textContent = 'Opened analysis + apply (browser mode can\'t gate on score).'; return; }
     const score = (resp.result && Number(resp.result.score)) || 0;
     const thr = resp.threshold || 0;
-    if (score >= thr) { window.open(url, '_blank', 'noopener'); status.style.color = '#196b45'; status.textContent = `Match ${score}%${thr ? ` ≥ ${thr}%` : ''} — opening apply…`; }
+    if (score >= thr) { window.open(url, '_blank', 'noopener'); try { chrome.runtime.sendMessage({ type: 'RECORD_APPLIED', job: { title: (resp.result && resp.result.role) || title || '', company: (resp.result && resp.result.company) || '', url, score, via: 'analyze-apply' } }); } catch (e) {} status.style.color = '#196b45'; status.textContent = `Match ${score}%${thr ? ` ≥ ${thr}%` : ''} — opening apply…`; }
     else { status.style.color = '#9d3025'; status.textContent = `Match ${score}% < ${thr}% — not opening apply.`; }
   }
   function decorate(card) {
@@ -142,7 +143,7 @@
     const applyBtn = button('Apply'); applyBtn.style.background = '#0a66c2';
     applyBtn.addEventListener('click', e => { if (!e.isTrusted) return; e.preventDefault(); e.stopPropagation(); const u = cardUrl(card); if (u) window.open(u, '_blank', 'noopener'); });
     const aaBtn = button('Analyze & Apply'); aaBtn.style.background = '#196b45';
-    aaBtn.addEventListener('click', async e => { if (!e.isTrusted) return; e.preventDefault(); e.stopPropagation(); aaBtn.disabled = true; try { await analyzeAndApply(read(card), cardUrl(card), status); } catch (err) { status.style.color = '#9d3025'; status.textContent = err.message; } finally { aaBtn.disabled = false; } });
+    aaBtn.addEventListener('click', async e => { if (!e.isTrusted) return; e.preventDefault(); e.stopPropagation(); aaBtn.disabled = true; try { await analyzeAndApply(read(card), cardUrl(card), status, cardTitle(card)); } catch (err) { status.style.color = '#9d3025'; status.textContent = err.message; } finally { aaBtn.disabled = false; } });
     root.append(analyze, applyBtn, aaBtn, applied, status);
     try { card.prepend(el); } catch { card.parentNode?.insertBefore(el, card); }
   }

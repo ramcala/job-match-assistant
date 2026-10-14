@@ -523,7 +523,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       const j = message.job || {};
       const { appliedJobs = [] } = await chrome.storage.local.get('appliedJobs');
       let portal = ''; try { portal = new URL(j.url).hostname.replace(/^www\./,''); } catch (e) {}
-      const rec = { id: (j.url||'') + '|' + (j.title||''), title: j.title||'', company: j.company||'', url: j.url||'', portal, score: null, appliedAt: Date.now(), via: 'easy-apply' };
+      const rec = { id: (j.url||'') + '|' + (j.title||''), title: j.title||'', company: j.company||'', url: j.url||'', portal, score: (j.score != null && Number.isFinite(Number(j.score)) ? Number(j.score) : null), appliedAt: Date.now(), via: j.via || 'easy-apply' };
       const i = appliedJobs.findIndex(x => x.id === rec.id);
       if (i >= 0) appliedJobs[i] = { ...appliedJobs[i], ...rec }; else appliedJobs.push(rec);
       await chrome.storage.local.set({ appliedJobs });
