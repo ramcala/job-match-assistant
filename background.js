@@ -21,6 +21,16 @@ async function listModels(apiKey) {
   if(!Array.isArray(data.data))throw new Error('Unexpected model list response.');
   return [...new Set(data.data.map(item=>item.id).filter(id=>typeof id==='string'))].sort();
 }
+const JM_STOP = new Set('the and for with you your our are will have has had job jobs role roles work working team teams company companies experience years year skills skill ability able strong good great excellent require required requirements responsibilities responsible including etc about into over under more most other such they them their there here who whom what which when while where why how all any some can could should would may might must not but also been being who new role apply please join looking seeking candidate candidates position positions'.split(/\s+/));
+function jmTokens(s){ return (String(s||'').toLowerCase().match(/[a-z][a-z0-9+#.\-]{2,}/g)||[]); }
+function localScoreJob(job, profile){
+  const jw=[...new Set(jmTokens((job.title||'')+' '+(job.description||'')).filter(w=>!JM_STOP.has(w)))];
+  const prof=new Set(jmTokens(profile));
+  if(!jw.length) return { score:0, matchedSkills:[], missingSkills:[], summary:'Not enough job text to score.', coverLetter:'' };
+  const matched=jw.filter(w=>prof.has(w)), missing=jw.filter(w=>!prof.has(w));
+  const score=Math.round(100*matched.length/jw.length);
+  return { score, matchedSkills:matched.slice(0,12), missingSkills:missing.slice(0,12), summary:`Local keyword overlap only: ${matched.length}/${jw.length} job terms found in your résumé. Not a full fit assessment.`, coverLetter:'' };
+}
 async function callOpenAI({ job, profile, apiKey, model }) {
   const prompt = `You are a precise job application assistant. Compare the candidate profile with the job. Never invent experience. Return JSON only with this shape: {"score": integer 0-100, "matchedSkills": string[], "missingSkills": string[], "summary": string, "coverLetter": string, "role": string, "company": string}. The cover letter must be 250-350 words, professional, specific, and ready to send. "role" is the exact job title the application is for and "company" is the hiring employer, both inferred from the post (use an empty string if unknown; never the post author unless they are the employer).\n\nCANDIDATE:\n${profile}\n\nJOB:\nTitle: ${job.title}\nCompany: ${job.company}\nLocation: ${job.location}\n${job.description}`;
   const response = await fetch("https://api.openai.com/v1/responses", {
@@ -535,6 +545,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       await chrome.storage.local.set({ eaLearned });
       return { ok: true, count: n };
     })().then(sendResponse).catch(error => sendResponse({ ok: false, error: error.message }));
+    return true;
+  }
+  if (message.type === 'ANALYZE_JOB') {
+    if (!sender.tab || !/(linkedin\.com|wellfound\.com|instahyre\.com|topmate\.io|naukri\.com|indeed\.com|glassdoor\.|cutshort\.io|hirist\.|foundit\.in|workatastartup\.com|ycombinator\.com|remoteok\.com|remote\.co|greenhouse\.io|lever\.co|myworkdayjobs\.com|smartrecruiters\.com|ashbyhq\.com|workable\.com|icims\.com|breezy\.hr|jobvite\.com)/.test(sender.url || '')) return;
+    (async () => {
+      const job = message.job || {};
+      if (!job.description || job.description.length < 30) throw new Error('Not enough job text to analyze.');
+      const s = await chrome.storage.local.get(['resumeText','analysisMode','apiKey','model','applyThreshold']);
+      if (!s.resumeText || s.resumeText.trim().length < 20) throw new Error('Add your résumé text in Settings first.');
+      const threshold = Number.isFinite(s.applyThreshold) ? s.applyThreshold : 0;
+      const mode = s.analysisMode || (s.apiKey ? 'openai' : 'local');
+      if (mode === 'openai' && s.apiKey) {
+        const result = await callOpenAI({ job: { title: job.title || '', company: job.company || '', location: job.location || '', description: job.description }, profile: s.resumeText, apiKey: s.apiKey, model: s.model });
+        return { ok: true, result, mode, threshold };
+      }
+      if (mode === 'local' || !s.apiKey) return { ok: true, result: localScoreJob(job, s.resumeText), mode: 'local', threshold };
+      return { ok: true, needsPopup: true, mode, threshold }; // browser-session modes can't score inline
+    })().then(r => sendResponse(r)).catch(e => sendResponse({ ok: false, error: e.message }));
     return true;
   }
   if (message.type === 'CONSUME_AUTO_ANALYZE') {

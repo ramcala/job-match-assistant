@@ -74,6 +74,7 @@ Authorized redirect URI: <code id="gmailRedirectUri"></code> <button id="gmailCo
 <label for="eaCurrentCTC">Current CTC</label><input id="eaCurrentCTC" placeholder="e.g. 45 LPA">
 <label for="eaExpectedCTC">Expected CTC</label><input id="eaExpectedCTC" placeholder="e.g. 60 LPA">
 <label for="eaWorkAuth">Authorized to work (Yes/No)</label><input id="eaWorkAuth" placeholder="Yes">
+<label for="applyThreshold">“Analyze &amp; Apply” match threshold (%)</label><input id="applyThreshold" type="number" min="0" max="100" placeholder="0"><p class="note">On a job board card, “Analyze &amp; Apply” opens the apply page only when the match score is at least this. 0 = always open. (Browser-session modes can’t gate and always open.)</p>
 <label class="chk"><input id="eaAutoSubmit" type="checkbox"> <span><strong>Auto-submit applications</strong> without stopping. Off by default. When on, the extension clicks Submit for you — applications are sent immediately and cannot be undone, and heavy automation can get your LinkedIn account restricted. It still refuses to submit if a required field is blank.</span></label>
 <p class="note" style="margin-top:8px">When Easy Apply pauses on a new screening question, answer it in the dialog, then click <strong>Remember my answers</strong> on the on-page card — it learns the answer for next time.</p>
 <p><button type="button" id="eaClearLearned">Clear learned answers</button> <span id="eaClearStatus" class="note"></span></p>

@@ -26,7 +26,7 @@ el('loadModels').addEventListener('click',async()=>{
   }catch(error){el('modelStatus').textContent=error.message;}
   finally{el('loadModels').disabled=false;}
 });
-chrome.storage.local.get(['apiKey','model','resume','resumeText','autoBackup','jobKeywords','jobLocation','emailFinderKey','emailFinderProvider','apolloKey','rocketreachKey','eaPhone','eaEmail','eaExperienceYears','eaNotice','eaCurrentCTC','eaExpectedCTC','eaLocation','eaWorkAuth','eaAutoSubmit']).then(s => {
+chrome.storage.local.get(['apiKey','model','resume','resumeText','autoBackup','jobKeywords','jobLocation','emailFinderKey','emailFinderProvider','apolloKey','rocketreachKey','applyThreshold','eaPhone','eaEmail','eaExperienceYears','eaNotice','eaCurrentCTC','eaExpectedCTC','eaLocation','eaWorkAuth','eaAutoSubmit']).then(s => {
   el('apiKey').value=s.apiKey||'';
   fillModels(['gpt-5-mini'],s.model||'gpt-5-mini'); el('resumeText').value=s.resumeText||'';
   el('resumeStatus').textContent=s.resume ? `Saved: ${s.resume.name}` : 'No resume saved.';
@@ -37,12 +37,13 @@ chrome.storage.local.get(['apiKey','model','resume','resumeText','autoBackup','j
   if (el('emailFinderProvider')) el('emailFinderProvider').value = s.emailFinderProvider || 'hunter';
   if (el('apolloKey')) el('apolloKey').value = s.apolloKey || '';
   if (el('rocketreachKey')) el('rocketreachKey').value = s.rocketreachKey || '';
+  if (el('applyThreshold')) el('applyThreshold').value = (s.applyThreshold != null ? s.applyThreshold : '');
   for(const k of ['eaPhone','eaEmail','eaExperienceYears','eaNotice','eaCurrentCTC','eaExpectedCTC','eaLocation','eaWorkAuth','eaAutoSubmit']){ const e=el(k); if(!e) continue; if(e.type==='checkbox') e.checked=!!s[k]; else e.value=s[k]||''; }
 });
 el('save').addEventListener('click', async () => {
  try {
   const ea={}; for(const k of ['eaPhone','eaEmail','eaExperienceYears','eaNotice','eaCurrentCTC','eaExpectedCTC','eaLocation','eaWorkAuth','eaAutoSubmit']){ const e=el(k); if(!e) continue; ea[k]= e.type==='checkbox'? e.checked : e.value.trim(); }
-  await chrome.storage.local.set({apiKey:el('apiKey').value.trim(),model:currentModel(),resumeText:el('resumeText').value.trim(),autoBackup:el('autoBackup').checked,jobKeywords:el('jobKeywords').value.trim(),jobLocation:el('jobLocation').value.trim(),emailFinderKey:el('emailFinderKey').value.trim(),emailFinderProvider:(el('emailFinderProvider')?el('emailFinderProvider').value:'hunter'),apolloKey:(el('apolloKey')?el('apolloKey').value.trim():''),rocketreachKey:(el('rocketreachKey')?el('rocketreachKey').value.trim():''),...ea});
+  await chrome.storage.local.set({apiKey:el('apiKey').value.trim(),model:currentModel(),resumeText:el('resumeText').value.trim(),autoBackup:el('autoBackup').checked,jobKeywords:el('jobKeywords').value.trim(),jobLocation:el('jobLocation').value.trim(),emailFinderKey:el('emailFinderKey').value.trim(),emailFinderProvider:(el('emailFinderProvider')?el('emailFinderProvider').value:'hunter'),apolloKey:(el('apolloKey')?el('apolloKey').value.trim():''),rocketreachKey:(el('rocketreachKey')?el('rocketreachKey').value.trim():''),applyThreshold:(el('applyThreshold')&&el('applyThreshold').value!==''?Math.max(0,Math.min(100,Number(el('applyThreshold').value)||0)):0),...ea});
   el('saved').textContent='Saved';
   try { if (window.JMFolderSync) await window.JMFolderSync.saveAll(false); } catch(e) {}
  } catch (error) { el('saved').textContent=error.message; }

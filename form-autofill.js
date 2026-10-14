@@ -108,6 +108,8 @@
     if (!Object.keys(pairs).length) { toast('Nothing filled in yet to remember.', false); return; }
     try { const r = await chrome.runtime.sendMessage({ type: 'EA_LEARN', pairs }); toast(`Remembered ${r?.count ?? 0} answer(s) for next time.`, true); } catch { toast('Could not save answers.', false); }
   }
+  globalThis.__jmFillForm = () => run();
+  globalThis.__jmHasForm = () => !!formScope();
   async function run() {
     const scope = formScope(); if (!scope) { toast('No application form found on this page.', false); return; }
     const ans = await getAnswers();
@@ -120,6 +122,7 @@
   let btnHost;
   function showButton() {
     if (btnHost?.isConnected) return;
+    if (globalThis.__jobMatchAnywhere) return; // board page: Analyze triggers fill
     if (!formScope()) return;
     const host = document.createElement('div'); host.setAttribute('data-jm-form', ''); btnHost = host;
     host.style.cssText = 'position:fixed!important;bottom:64px!important;right:16px!important;z-index:2147483647!important;display:block!important';

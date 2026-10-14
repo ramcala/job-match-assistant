@@ -55,6 +55,7 @@
     appliedAt = Date.now();
     try { const r = await chrome.runtime.sendMessage({ type: 'APPLIED_URLS' }); if (r?.ok) appliedUrls = new Set((r.urls || []).map(normUrl)); } catch {}
   }
+  function maybeFillForm() { try { if (globalThis.__jmHasForm && globalThis.__jmHasForm()) globalThis.__jmFillForm(); } catch (e) {} }
   async function open(description, url) {
     if (description.length < 30) throw new Error('Not enough text to analyze on this element.');
     if (!chrome.runtime?.id) throw new Error('Extension updated. Refresh this tab.');
@@ -106,6 +107,7 @@
       try {
         await expandLinkedIn();
         await open(pageText(), location.href);
+        maybeFillForm();
       } catch (err) { status.textContent = err.message; } finally { analyze.disabled = false; }
     });
     const loadAll = button('Load all jobs'); loadAll.style.background = '#334155';
@@ -116,6 +118,17 @@
     box.append(label, analyze, loadAll, status); root.append(box); document.documentElement.append(el);
   }
 
+  async function analyzeAndApply(desc, url, status) {
+    if (desc.length < 30) throw new Error('Not enough text to analyze.');
+    status.textContent = 'Analyzing…'; status.style.color = '#334155';
+    const resp = await chrome.runtime.sendMessage({ type: 'ANALYZE_JOB', job: { title: '', company: '', location: '', description: desc.slice(0, 30000), url } });
+    if (!resp || !resp.ok) throw new Error((resp && resp.error) || 'Analysis failed.');
+    if (resp.needsPopup) { await open(desc, url); maybeFillForm(); window.open(url, '_blank', 'noopener'); status.style.color = '#334155'; status.textContent = 'Opened analysis + apply (browser mode can\'t gate on score).'; return; }
+    const score = (resp.result && Number(resp.result.score)) || 0;
+    const thr = resp.threshold || 0;
+    if (score >= thr) { window.open(url, '_blank', 'noopener'); status.style.color = '#196b45'; status.textContent = `Match ${score}%${thr ? ` ≥ ${thr}%` : ''} — opening apply…`; }
+    else { status.style.color = '#9d3025'; status.textContent = `Match ${score}% < ${thr}% — not opening apply.`; }
+  }
   function decorate(card) {
     if (card.querySelector('[data-jm-btn]')) return;
     const { el, root } = host(); el.setAttribute('data-jm-btn', '');
@@ -124,11 +137,13 @@
     const status = document.createElement('span'); status.style.cssText = 'font:12px system-ui;color:#9d3025';
     analyze.addEventListener('click', async e => {
       if (!e.isTrusted) return; e.preventDefault(); e.stopPropagation(); analyze.disabled = true; status.textContent = '';
-      try { await open(read(card), cardUrl(card)); } catch (err) { status.textContent = err.message; } finally { analyze.disabled = false; }
+      try { await open(read(card), cardUrl(card)); maybeFillForm(); } catch (err) { status.textContent = err.message; } finally { analyze.disabled = false; }
     });
     const applyBtn = button('Apply'); applyBtn.style.background = '#0a66c2';
     applyBtn.addEventListener('click', e => { if (!e.isTrusted) return; e.preventDefault(); e.stopPropagation(); const u = cardUrl(card); if (u) window.open(u, '_blank', 'noopener'); });
-    root.append(analyze, applyBtn, applied, status);
+    const aaBtn = button('Analyze & Apply'); aaBtn.style.background = '#196b45';
+    aaBtn.addEventListener('click', async e => { if (!e.isTrusted) return; e.preventDefault(); e.stopPropagation(); aaBtn.disabled = true; try { await analyzeAndApply(read(card), cardUrl(card), status); } catch (err) { status.style.color = '#9d3025'; status.textContent = err.message; } finally { aaBtn.disabled = false; } });
+    root.append(analyze, applyBtn, aaBtn, applied, status);
     try { card.prepend(el); } catch { card.parentNode?.insertBefore(el, card); }
   }
   function markApplied(card) {

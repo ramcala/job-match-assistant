@@ -2,6 +2,10 @@
 
 All notable changes are listed newest first. Versions match `manifest.json`.
 
+## v1.51.0 — Analyze+Apply and fill-on-analyze
+- **Form fill is now part of Analyze**: when the page has an application form, clicking Analyze fills it from your saved answers (no separate button needed on board pages).
+- **Analyze & Apply** button on job cards: scores the job with your selected provider (or local keyword overlap) and opens the apply page only when the score meets your **match threshold** (Settings; 0 = always). Browser-session modes always open.
+
 ## v1.50.0 — Board auto-apply helpers
 - **Load all jobs**: a button on job boards auto-scrolls to load every listing, then decorates them.
 - **Apply button on each job card** (opens the listing to apply).

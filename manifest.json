@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Job Match Assistant",
-  "version": "1.50.0",
+  "version": "1.51.0",
   "minimum_chrome_version": "127",
   "content_scripts": [
     {
