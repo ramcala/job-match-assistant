@@ -503,7 +503,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   if (message.type === 'EA_ANSWERS') {
-    if (!sender.tab || !/linkedin\.com/.test(sender.url || '')) return;
+    if (!sender.tab || !/(linkedin\.com|wellfound\.com|instahyre\.com|topmate\.io|naukri\.com|indeed\.com|glassdoor\.|cutshort\.io|hirist\.|foundit\.in|workatastartup\.com|ycombinator\.com|remoteok\.com|remote\.co|greenhouse\.io|lever\.co|myworkdayjobs\.com|smartrecruiters\.com|ashbyhq\.com|workable\.com|icims\.com|breezy\.hr|jobvite\.com)/.test(sender.url || '')) return;
     (async () => { const a = await chrome.storage.local.get(['eaPhone','eaEmail','eaExperienceYears','eaNotice','eaCurrentCTC','eaExpectedCTC','eaLocation','eaWorkAuth','eaAutoSubmit','eaLearned']); return { ok: true, answers: a }; })().then(sendResponse).catch(error => sendResponse({ ok: false, error: error.message }));
     return true;
   }
@@ -522,7 +522,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   if (message.type === 'EA_LEARN') {
-    if (!sender.tab || !/linkedin\.com/.test(sender.url || '')) return;
+    if (!sender.tab || !/(linkedin\.com|wellfound\.com|instahyre\.com|topmate\.io|naukri\.com|indeed\.com|glassdoor\.|cutshort\.io|hirist\.|foundit\.in|workatastartup\.com|ycombinator\.com|remoteok\.com|remote\.co|greenhouse\.io|lever\.co|myworkdayjobs\.com|smartrecruiters\.com|ashbyhq\.com|workable\.com|icims\.com|breezy\.hr|jobvite\.com)/.test(sender.url || '')) return;
     (async () => {
       const pairs = message.pairs && typeof message.pairs === 'object' ? message.pairs : {};
       const { eaLearned = {} } = await chrome.storage.local.get('eaLearned');

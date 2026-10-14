@@ -82,6 +82,17 @@
     return a?.href || location.href;
   }
 
+  async function autoScroll(status) {
+    let last = -1, stable = 0;
+    for (let i = 0; i < 40 && stable < 3; i++) {
+      window.scrollTo(0, document.body.scrollHeight);
+      await new Promise(r => setTimeout(r, 700));
+      const h = document.body.scrollHeight;
+      if (h === last) stable++; else { stable = 0; last = h; }
+      if (status) { try { status.textContent = `Loading… ${findCards().length} jobs`; } catch (e) {} }
+    }
+    window.scrollTo(0, 0);
+  }
   function makeFloating() {
     if (floatBtn?.isConnected) return;
     const { el, root } = host(); floatBtn = el;
@@ -97,7 +108,12 @@
         await open(pageText(), location.href);
       } catch (err) { status.textContent = err.message; } finally { analyze.disabled = false; }
     });
-    box.append(label, analyze, status); root.append(box); document.documentElement.append(el);
+    const loadAll = button('Load all jobs'); loadAll.style.background = '#334155';
+    loadAll.addEventListener('click', async e => {
+      if (!e.isTrusted) return; loadAll.disabled = true; status.textContent = 'Loading…';
+      try { await autoScroll(status); refresh(); status.textContent = ''; } catch (err) { status.textContent = err.message; } finally { loadAll.disabled = false; }
+    });
+    box.append(label, analyze, loadAll, status); root.append(box); document.documentElement.append(el);
   }
 
   function decorate(card) {
@@ -110,7 +126,9 @@
       if (!e.isTrusted) return; e.preventDefault(); e.stopPropagation(); analyze.disabled = true; status.textContent = '';
       try { await open(read(card), cardUrl(card)); } catch (err) { status.textContent = err.message; } finally { analyze.disabled = false; }
     });
-    root.append(analyze, applied, status);
+    const applyBtn = button('Apply'); applyBtn.style.background = '#0a66c2';
+    applyBtn.addEventListener('click', e => { if (!e.isTrusted) return; e.preventDefault(); e.stopPropagation(); const u = cardUrl(card); if (u) window.open(u, '_blank', 'noopener'); });
+    root.append(analyze, applyBtn, applied, status);
     try { card.prepend(el); } catch { card.parentNode?.insertBefore(el, card); }
   }
   function markApplied(card) {

@@ -2,6 +2,11 @@
 
 All notable changes are listed newest first. Versions match `manifest.json`.
 
+## v1.50.0 — Board auto-apply helpers
+- **Load all jobs**: a button on job boards auto-scrolls to load every listing, then decorates them.
+- **Apply button on each job card** (opens the listing to apply).
+- **Universal form autofiller**: on job boards and common ATS (Greenhouse, Lever, Workday, SmartRecruiters, Ashby, Workable, iCIMS, Breezy, Jobvite), a "⚡ Fill application form" button fills fields it can map from your saved answers (+learned), **stops rather than guess**, and **never submits** — you review and submit. A "Remember my answers" action learns new questions.
+
 ## v1.49.0 — Cleaner home
 - Moved the **"From your inbox" job list to its own page**, opened with a button on the home screen; the Home button returns.
 - The home screen now leads with the **full job-boards list** and the ATS badge, less cluttered.
