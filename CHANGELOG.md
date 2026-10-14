@@ -2,6 +2,10 @@
 
 All notable changes are listed newest first. Versions match `manifest.json`.
 
+## v1.49.0 — Cleaner home
+- Moved the **"From your inbox" job list to its own page**, opened with a button on the home screen; the Home button returns.
+- The home screen now leads with the **full job-boards list** and the ATS badge, less cluttered.
+
 ## v1.48.0 — Cover letter as PDF
 - **Download** now saves the cover letter as a **PDF** (A4, wrapped, multi-page) instead of a .txt file, using a small built-in PDF writer — no new library or permission.
 

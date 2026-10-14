@@ -189,6 +189,7 @@ $("settings").addEventListener("click", () => chrome.runtime.openOptionsPage());
 async function goHome() {
   $('result').classList.add('hidden');
   $('postReview').classList.add('hidden');
+  if ($('inboxPage')) $('inboxPage').classList.add('hidden');
   if ($('apiErrorBox')) $('apiErrorBox').hidden = true;
   $('empty').classList.remove('hidden');
   if ($('homeBtn')) $('homeBtn').hidden = true;
@@ -646,3 +647,13 @@ async function runAtsPopup(){
 }
 if($('atsCheckPopup')) $('atsCheckPopup').addEventListener('click', runAtsPopup);
 renderAtsBadge();
+
+// ---- Inbox page ----
+{ const _openInbox = document.getElementById('openInbox'); if (_openInbox) _openInbox.addEventListener('click', async () => {
+  $('empty').classList.add('hidden');
+  if ($('result')) $('result').classList.add('hidden');
+  if ($('postReview')) $('postReview').classList.add('hidden');
+  if ($('inboxPage')) $('inboxPage').classList.remove('hidden');
+  if ($('homeBtn')) $('homeBtn').hidden = false;
+  try { await renderInbox(); } catch (e) {}
+}); }

@@ -36,10 +36,7 @@
     <section id="empty" class="card">
       <p id="status" class="status"></p>
       <section class="boards">
-        <div class="applied-head"><h3>From your inbox</h3><button id="inboxRefresh" type="button">Refresh from Gmail</button></div>
-        <p id="inboxStatus" class="status"></p>
-        <input id="inboxFilter" type="text" placeholder="Filter by keyword (e.g. backend, manager)">
-        <ul id="inboxJobs" class="inbox-list"></ul>
+        <button id="openInbox" type="button" class="full-btn">📥 Job alerts from your inbox</button>
       </section>
       <section class="boards" id="atsCard">
         <div class="applied-head"><h3>Résumé ATS score</h3><button id="atsCheckPopup" type="button">Check now</button></div>
@@ -59,6 +56,13 @@
         <input id="restoreFile" type="file" accept="application/json,.json" style="display:none">
         <ul id="appliedList"></ul>
       </section>
+    </section>
+    <section id="inboxPage" class="card hidden">
+      <div class="applied-head"><h3>From your inbox</h3><button id="inboxRefresh" type="button">Refresh from Gmail</button></div>
+      <p class="note">Jobs pulled from LinkedIn/Indeed/Naukri/etc. job-alert emails in your connected Gmail.</p>
+      <p id="inboxStatus" class="status"></p>
+      <input id="inboxFilter" type="text" placeholder="Filter by keyword (e.g. backend, manager)">
+      <ul id="inboxJobs" class="inbox-list"></ul>
     </section>
 
     <section id="postReview" class="card hidden">
