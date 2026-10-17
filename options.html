@@ -79,6 +79,10 @@ Authorized redirect URI: <code id="gmailRedirectUri"></code> <button id="gmailCo
 <p class="note" style="margin-top:8px">When Easy Apply pauses on a new screening question, answer it in the dialog, then click <strong>Remember my answers</strong> on the on-page card — it learns the answer for next time.</p>
 <p><button type="button" id="eaClearLearned">Clear learned answers</button> <span id="eaClearStatus" class="note"></span></p>
 </section>
+<section><h2>LinkedIn connection note</h2>
+<p>Used by the “✍️ Add note” button on LinkedIn’s “Add a note to your invitation” box. Placeholders: <code>{firstName}</code>, <code>{name}</code>. Max ~290 characters. “✨ AI note” rewrites it with your OpenAI model when selected.</p>
+<textarea id="connectNoteTemplate" rows="3" maxlength="290" placeholder="Hi {firstName}, I’d love to connect and follow your work."></textarea>
+</section>
 <section><h2>Job search shortcut</h2>
 <p>Used by the "Job boards" buttons in the popup to open each site pre-filled with this search. Leave blank to open each board's home page.</p>
 <label for="jobKeywords">Keywords</label><input id="jobKeywords" placeholder="e.g. backend engineer">

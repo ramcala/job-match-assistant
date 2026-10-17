@@ -31,6 +31,26 @@ function localScoreJob(job, profile){
   const score=Math.round(100*matched.length/jw.length);
   return { score, matchedSkills:matched.slice(0,12), missingSkills:missing.slice(0,12), summary:`Local keyword overlap only: ${matched.length}/${jw.length} job terms found in your résumé. Not a full fit assessment.`, coverLetter:'' };
 }
+const DEFAULT_CONNECT_NOTE = "Hi {firstName}, I came across your profile and would love to connect and follow your work. Thanks for considering!";
+function buildConnectNote(template, name) {
+  const full = String(name || '').trim();
+  const first = (full.split(/\s+/)[0] || 'there').replace(/[^A-Za-z'\-]/g, '') || 'there';
+  return String(template || DEFAULT_CONNECT_NOTE).replace(/\{firstName\}/g, first).replace(/\{name\}/g, full || first).trim().slice(0, 290);
+}
+async function aiConnectNote({ name, headline, resumeText, apiKey, model }) {
+  const first = (String(name||'').trim().split(/\s+/)[0]) || 'there';
+  const prompt = `Write a LinkedIn connection-request note. Hard limit 280 characters. Warm, professional, specific, first person; greet them by first name ("${first}"); one or two sentences; no hashtags, no emojis, no links; do not invent facts. Reply with ONLY the note text.\n\nRECIPIENT: ${name}${headline ? ' — ' + headline : ''}\nSENDER BACKGROUND (for tone/relevance, do not quote verbatim):\n${String(resumeText||'').slice(0,1500)}`;
+  const r = await fetch('https://api.openai.com/v1/responses', {
+    method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+    signal: AbortSignal.timeout(45000),
+    body: JSON.stringify({ model: model || 'gpt-5-mini', store: false, instructions: 'You write short, sincere LinkedIn connection notes and reply with only the note.', input: prompt })
+  });
+  if (!r.ok) throw new Error(await describeAPIError(r));
+  const d = await r.json();
+  const out = (d.output_text || d.output?.flatMap(x => x.content || []).find(x => x.type === 'output_text')?.text || '').trim().replace(/^["']|["']$/g, '');
+  if (!out) throw new Error('No note returned.');
+  return out.slice(0, 290);
+}
 async function callOpenAI({ job, profile, apiKey, model }) {
   const prompt = `You are a precise job application assistant. Compare the candidate profile with the job. Never invent experience. Return JSON only with this shape: {"score": integer 0-100, "matchedSkills": string[], "missingSkills": string[], "summary": string, "coverLetter": string, "role": string, "company": string}. The cover letter must be 250-350 words, professional, specific, and ready to send. "role" is the exact job title the application is for and "company" is the hiring employer, both inferred from the post (use an empty string if unknown; never the post author unless they are the employer).\n\nCANDIDATE:\n${profile}\n\nJOB:\nTitle: ${job.title}\nCompany: ${job.company}\nLocation: ${job.location}\n${job.description}`;
   const response = await fetch("https://api.openai.com/v1/responses", {
@@ -563,6 +583,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (mode === 'local' || !s.apiKey) return { ok: true, result: localScoreJob(job, s.resumeText), mode: 'local', threshold };
       return { ok: true, needsPopup: true, mode, threshold }; // browser-session modes can't score inline
     })().then(r => sendResponse(r)).catch(e => sendResponse({ ok: false, error: e.message }));
+    return true;
+  }
+  if (message.type === 'CONNECT_NOTE') {
+    if (!sender.tab || !/linkedin\.com/.test(sender.url || '')) return;
+    (async () => {
+      const s = await chrome.storage.local.get(['connectNoteTemplate','resumeText','analysisMode','apiKey','model']);
+      if (message.ai) {
+        const mode = s.analysisMode || (s.apiKey ? 'openai' : 'local');
+        if (mode === 'openai' && s.apiKey) {
+          try { const note = await aiConnectNote({ name: message.name, headline: message.headline, resumeText: s.resumeText, apiKey: s.apiKey, model: s.model }); return { ok: true, note, viaAi: true }; }
+          catch (e) { return { ok: true, note: buildConnectNote(s.connectNoteTemplate, message.name), viaAi: false, warn: e.message }; }
+        }
+      }
+      return { ok: true, note: buildConnectNote(s.connectNoteTemplate, message.name), viaAi: false };
+    })().then(sendResponse).catch(e => sendResponse({ ok: false, error: e.message }));
     return true;
   }
   if (message.type === 'CONSUME_AUTO_ANALYZE') {

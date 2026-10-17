@@ -2,6 +2,10 @@
 
 All notable changes are listed newest first. Versions match `manifest.json`.
 
+## v1.53.0 — LinkedIn connection note
+- On LinkedIn’s “Add a note to your invitation?” box, two buttons appear: **✍️ Add note** fills a personalized note from your template ({firstName}/{name}); **✨ AI note** writes one with your OpenAI model from the person’s name and your résumé. Capped to ~290 chars; you review before sending.
+- Edit the template in **Settings → LinkedIn connection note**.
+
 ## v1.52.0 — Log the score on Analyze & Apply
 - When **Analyze & Apply** opens an apply page, the job is now logged to your **applied tracker with its match score** (via "analyze-apply"), using the role/company the AI inferred when available.
 
