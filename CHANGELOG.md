@@ -2,6 +2,10 @@
 
 All notable changes are listed newest first. Versions match `manifest.json`.
 
+## v1.54.1 — Connection-note fixes
+- The note buttons now detect LinkedIn’s invitation box more reliably (by placeholder / dialog), and only inside the invitation dialog.
+- Notes are capped to the field’s real limit (200 for free LinkedIn) and the AI note is told that limit, so Send no longer rejects an over-long note.
+
 ## v1.54.0 — AI connection note reads the profile
 - **✨ AI note** now analyzes the invitee’s LinkedIn profile (headline, About, current role) when you’re on their profile page and references a concrete detail, so the note is genuinely personal.
 

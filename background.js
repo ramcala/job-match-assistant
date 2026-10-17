@@ -32,14 +32,15 @@ function localScoreJob(job, profile){
   return { score, matchedSkills:matched.slice(0,12), missingSkills:missing.slice(0,12), summary:`Local keyword overlap only: ${matched.length}/${jw.length} job terms found in your résumé. Not a full fit assessment.`, coverLetter:'' };
 }
 const DEFAULT_CONNECT_NOTE = "Hi {firstName}, I came across your profile and would love to connect and follow your work. Thanks for considering!";
-function buildConnectNote(template, name) {
+function buildConnectNote(template, name, maxLen) {
   const full = String(name || '').trim();
   const first = (full.split(/\s+/)[0] || 'there').replace(/[^A-Za-z'\-]/g, '') || 'there';
-  return String(template || DEFAULT_CONNECT_NOTE).replace(/\{firstName\}/g, first).replace(/\{name\}/g, full || first).trim().slice(0, 290);
+  return String(template || DEFAULT_CONNECT_NOTE).replace(/\{firstName\}/g, first).replace(/\{name\}/g, full || first).trim().slice(0, (Number.isFinite(maxLen) && maxLen > 0) ? maxLen : 200);
 }
-async function aiConnectNote({ name, headline, profile, resumeText, apiKey, model }) {
+async function aiConnectNote({ name, headline, profile, resumeText, apiKey, model, maxLen }) {
   const first = (String(name||'').trim().split(/\s+/)[0]) || 'there';
-  const prompt = `Write a LinkedIn connection-request note. Hard limit 280 characters. Warm, professional, specific, first person; greet them by first name ("${first}"); reference ONE concrete detail from their profile below so it is clearly personal; one or two sentences; no hashtags, no emojis, no links; do not invent facts or flatter. Reply with ONLY the note text.\n\nRECIPIENT: ${name}${headline ? ' — ' + headline : ''}\nRECIPIENT PROFILE (use a real detail from here):\n${String(profile||'(no extra profile detail available)').slice(0,1800)}\n\nSENDER BACKGROUND (for tone/relevance, do not quote verbatim):\n${String(resumeText||'').slice(0,1200)}`;
+  const lim = (Number.isFinite(maxLen) && maxLen > 0) ? maxLen : 200;
+  const prompt = `Write a LinkedIn connection-request note. Hard limit ${lim} characters (count carefully and stay under it). Warm, professional, specific, first person; greet them by first name ("${first}"); reference ONE concrete detail from their profile below so it is clearly personal; one or two sentences; no hashtags, no emojis, no links; do not invent facts or flatter. Reply with ONLY the note text.\n\nRECIPIENT: ${name}${headline ? ' — ' + headline : ''}\nRECIPIENT PROFILE (use a real detail from here):\n${String(profile||'(no extra profile detail available)').slice(0,1800)}\n\nSENDER BACKGROUND (for tone/relevance, do not quote verbatim):\n${String(resumeText||'').slice(0,1200)}`;
   const r = await fetch('https://api.openai.com/v1/responses', {
     method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
     signal: AbortSignal.timeout(45000),
@@ -49,7 +50,7 @@ async function aiConnectNote({ name, headline, profile, resumeText, apiKey, mode
   const d = await r.json();
   const out = (d.output_text || d.output?.flatMap(x => x.content || []).find(x => x.type === 'output_text')?.text || '').trim().replace(/^["']|["']$/g, '');
   if (!out) throw new Error('No note returned.');
-  return out.slice(0, 290);
+  return out.slice(0, (Number.isFinite(maxLen) && maxLen > 0) ? maxLen : 200);
 }
 async function callOpenAI({ job, profile, apiKey, model }) {
   const prompt = `You are a precise job application assistant. Compare the candidate profile with the job. Never invent experience. Return JSON only with this shape: {"score": integer 0-100, "matchedSkills": string[], "missingSkills": string[], "summary": string, "coverLetter": string, "role": string, "company": string}. The cover letter must be 250-350 words, professional, specific, and ready to send. "role" is the exact job title the application is for and "company" is the hiring employer, both inferred from the post (use an empty string if unknown; never the post author unless they are the employer).\n\nCANDIDATE:\n${profile}\n\nJOB:\nTitle: ${job.title}\nCompany: ${job.company}\nLocation: ${job.location}\n${job.description}`;
@@ -592,11 +593,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (message.ai) {
         const mode = s.analysisMode || (s.apiKey ? 'openai' : 'local');
         if (mode === 'openai' && s.apiKey) {
-          try { const note = await aiConnectNote({ name: message.name, headline: message.headline, profile: message.profile, resumeText: s.resumeText, apiKey: s.apiKey, model: s.model }); return { ok: true, note, viaAi: true }; }
-          catch (e) { return { ok: true, note: buildConnectNote(s.connectNoteTemplate, message.name), viaAi: false, warn: e.message }; }
+          try { const note = await aiConnectNote({ name: message.name, headline: message.headline, profile: message.profile, resumeText: s.resumeText, apiKey: s.apiKey, model: s.model, maxLen: message.maxLen }); return { ok: true, note, viaAi: true }; }
+          catch (e) { return { ok: true, note: buildConnectNote(s.connectNoteTemplate, message.name, message.maxLen), viaAi: false, warn: e.message }; }
         }
       }
-      return { ok: true, note: buildConnectNote(s.connectNoteTemplate, message.name), viaAi: false };
+      return { ok: true, note: buildConnectNote(s.connectNoteTemplate, message.name, message.maxLen), viaAi: false };
     })().then(sendResponse).catch(e => sendResponse({ ok: false, error: e.message }));
     return true;
   }

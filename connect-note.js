@@ -9,8 +9,9 @@
   const own = n => n?.nodeType === 1 && !!n.closest('[data-jm-note]');
 
   function noteField() {
-    return document.querySelector('#custom-message') ||
-      [...document.querySelectorAll('[role="dialog"] textarea, .send-invite textarea, textarea[name="message"]')].find(t => t.offsetParent) || null;
+    const sels = ['#custom-message', 'textarea[name="message"]', 'textarea[placeholder*="know each other" i]', 'textarea[placeholder*="note" i]', '[role="dialog"] textarea', '.send-invite textarea', '.artdeco-modal textarea'];
+    for (const s of sels) { const t = [...document.querySelectorAll(s)].find(x => x.offsetParent); if (t) return t; }
+    return null;
   }
   function inviteeName() {
     const dlg = (noteField() && noteField().closest('[role="dialog"]')) || document.querySelector('[role="dialog"]') || document;
@@ -50,9 +51,11 @@
     if (btn) btn.disabled = true; if (status) status.textContent = ai ? 'Writing…' : '';
     try {
       const ctx = profileContext();
-      const resp = await chrome.runtime.sendMessage({ type: 'CONNECT_NOTE', name: inviteeName() || profileName(), headline: ctx.headline, profile: ctx.text, ai: !!ai });
+      const cap = (ta.maxLength && ta.maxLength > 0) ? ta.maxLength : 200;
+      const resp = await chrome.runtime.sendMessage({ type: 'CONNECT_NOTE', name: inviteeName() || profileName(), headline: ctx.headline, profile: ctx.text, maxLen: cap, ai: !!ai });
       if (!resp || !resp.ok) throw new Error((resp && resp.error) || 'Could not build a note.');
-      setValue(ta, resp.note.slice(0, 290)); ta.focus();
+      const cap2 = (ta.maxLength && ta.maxLength > 0) ? ta.maxLength : 200;
+      setValue(ta, resp.note.slice(0, cap2)); ta.focus();
       if (status) status.textContent = `${resp.note.length} chars${resp.viaAi ? ' (AI)' : ''}. Review, then Send.`;
     } catch (e) { if (status) status.textContent = e.message; }
     finally { if (btn) btn.disabled = false; }
@@ -60,6 +63,7 @@
 
   function inject() {
     const ta = noteField(); if (!ta) return;
+    if (!ta.closest('[role="dialog"], .artdeco-modal, .send-invite')) return; // only the invitation dialog
     const box = ta.closest('[role="dialog"], .send-invite, form, div') || ta.parentElement;
     if (!box || box.querySelector('[data-jm-note]')) return;
     const host = document.createElement('div'); host.setAttribute('data-jm-note', '');
