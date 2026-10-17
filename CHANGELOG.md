@@ -2,6 +2,9 @@
 
 All notable changes are listed newest first. Versions match `manifest.json`.
 
+## v1.54.0 — AI connection note reads the profile
+- **✨ AI note** now analyzes the invitee’s LinkedIn profile (headline, About, current role) when you’re on their profile page and references a concrete detail, so the note is genuinely personal.
+
 ## v1.53.0 — LinkedIn connection note
 - On LinkedIn’s “Add a note to your invitation?” box, two buttons appear: **✍️ Add note** fills a personalized note from your template ({firstName}/{name}); **✨ AI note** writes one with your OpenAI model from the person’s name and your résumé. Capped to ~290 chars; you review before sending.
 - Edit the template in **Settings → LinkedIn connection note**.

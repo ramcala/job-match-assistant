@@ -37,9 +37,9 @@ function buildConnectNote(template, name) {
   const first = (full.split(/\s+/)[0] || 'there').replace(/[^A-Za-z'\-]/g, '') || 'there';
   return String(template || DEFAULT_CONNECT_NOTE).replace(/\{firstName\}/g, first).replace(/\{name\}/g, full || first).trim().slice(0, 290);
 }
-async function aiConnectNote({ name, headline, resumeText, apiKey, model }) {
+async function aiConnectNote({ name, headline, profile, resumeText, apiKey, model }) {
   const first = (String(name||'').trim().split(/\s+/)[0]) || 'there';
-  const prompt = `Write a LinkedIn connection-request note. Hard limit 280 characters. Warm, professional, specific, first person; greet them by first name ("${first}"); one or two sentences; no hashtags, no emojis, no links; do not invent facts. Reply with ONLY the note text.\n\nRECIPIENT: ${name}${headline ? ' — ' + headline : ''}\nSENDER BACKGROUND (for tone/relevance, do not quote verbatim):\n${String(resumeText||'').slice(0,1500)}`;
+  const prompt = `Write a LinkedIn connection-request note. Hard limit 280 characters. Warm, professional, specific, first person; greet them by first name ("${first}"); reference ONE concrete detail from their profile below so it is clearly personal; one or two sentences; no hashtags, no emojis, no links; do not invent facts or flatter. Reply with ONLY the note text.\n\nRECIPIENT: ${name}${headline ? ' — ' + headline : ''}\nRECIPIENT PROFILE (use a real detail from here):\n${String(profile||'(no extra profile detail available)').slice(0,1800)}\n\nSENDER BACKGROUND (for tone/relevance, do not quote verbatim):\n${String(resumeText||'').slice(0,1200)}`;
   const r = await fetch('https://api.openai.com/v1/responses', {
     method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
     signal: AbortSignal.timeout(45000),
@@ -592,7 +592,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (message.ai) {
         const mode = s.analysisMode || (s.apiKey ? 'openai' : 'local');
         if (mode === 'openai' && s.apiKey) {
-          try { const note = await aiConnectNote({ name: message.name, headline: message.headline, resumeText: s.resumeText, apiKey: s.apiKey, model: s.model }); return { ok: true, note, viaAi: true }; }
+          try { const note = await aiConnectNote({ name: message.name, headline: message.headline, profile: message.profile, resumeText: s.resumeText, apiKey: s.apiKey, model: s.model }); return { ok: true, note, viaAi: true }; }
           catch (e) { return { ok: true, note: buildConnectNote(s.connectNoteTemplate, message.name), viaAi: false, warn: e.message }; }
         }
       }

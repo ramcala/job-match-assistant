@@ -27,12 +27,30 @@
     el.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
+  function profileName() {
+    const h = document.querySelector('.pv-text-details__left-panel h1, main h1, h1.text-heading-xlarge');
+    return h ? read(h).slice(0, 80) : '';
+  }
+  function profileContext() {
+    if (!/\/in\//.test(location.pathname)) return { headline: '', text: '' };
+    const pick = sels => { for (const s of sels) { const t = read(document.querySelector(s)); if (t) return t; } return ''; };
+    const headline = pick(['.pv-text-details__left-panel .text-body-medium', '.text-body-medium.break-words']).slice(0, 220);
+    let about = '';
+    const aA = document.querySelector('#about');
+    if (aA) { const sec = aA.closest('section'); about = read(sec && (sec.querySelector('.inline-show-more-text, .display-flex.full-width') || sec)).replace(/^about\s*/i, '').slice(0, 1000); }
+    let exp = '';
+    const eA = document.querySelector('#experience');
+    if (eA) { const sec = eA.closest('section'); const li = sec && sec.querySelector('li'); exp = read(li).slice(0, 300); }
+    const text = [headline && ('Headline: ' + headline), about && ('About: ' + about), exp && ('Experience: ' + exp)].filter(Boolean).join('\n').slice(0, 1800);
+    return { headline, text };
+  }
   async function fill(ai, btn, status) {
     const ta = noteField();
     if (!ta) { if (status) status.textContent = 'Open the "Add a note" box first.'; return; }
     if (btn) btn.disabled = true; if (status) status.textContent = ai ? 'Writing…' : '';
     try {
-      const resp = await chrome.runtime.sendMessage({ type: 'CONNECT_NOTE', name: inviteeName(), headline: '', ai: !!ai });
+      const ctx = profileContext();
+      const resp = await chrome.runtime.sendMessage({ type: 'CONNECT_NOTE', name: inviteeName() || profileName(), headline: ctx.headline, profile: ctx.text, ai: !!ai });
       if (!resp || !resp.ok) throw new Error((resp && resp.error) || 'Could not build a note.');
       setValue(ta, resp.note.slice(0, 290)); ta.focus();
       if (status) status.textContent = `${resp.note.length} chars${resp.viaAi ? ' (AI)' : ''}. Review, then Send.`;
