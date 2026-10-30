@@ -26,6 +26,9 @@ credential for you.
 ## Notes
 - Use a **Web application** client (not "Chrome extension"). Older Chrome‑extension clients won't
   work with this flow.
-- Tokens are short‑lived (~1 hour, no refresh token); reconnect when they expire.
+- Tokens are short‑lived (~1 hour; Google gives no refresh token without a client secret). The extension
+  renews them silently, also after a browser restart, while you stay signed in to Google in Chrome. Click
+  **Connect Gmail** again only if you signed out of Google, Chrome clears cookies on exit, or you revoked
+  access. **Disconnect locally** stops the renewal.
 - Don't change the extension's folder/ID after setup — it changes the redirect URI.
 - Sending is always **review‑then‑confirm**: only the exact message shown is sent.

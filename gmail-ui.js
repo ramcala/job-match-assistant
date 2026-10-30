@@ -13,6 +13,8 @@
   } else {b.className='gbadge';b.title='Connect Gmail';b.textContent=busy?'Connecting…':'Connect Gmail';}
  }
  async function status() {
+  // After a browser restart the background renews the token silently first, which can take a moment.
+  if(!$('gmailAccountStatus').textContent)$('gmailAccountStatus').textContent='Checking Gmail connection…';
   try {
    const info=await request('GMAIL_STATUS');
    const connected=!!info.email;badge(info);

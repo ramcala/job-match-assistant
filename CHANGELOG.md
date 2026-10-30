@@ -2,6 +2,12 @@
 
 All notable changes are listed newest first. Versions match `manifest.json`.
 
+## v1.55.0 — Gmail stays connected after a restart
+- Gmail no longer disconnects every time you close and reopen Chrome (or after Google’s ~1-hour token expiry). The extension now remembers which account you connected (address and granted permissions only, never the token) and renews access silently in the background, so the badge shows your avatar and **Send email** works without clicking **Connect Gmail** again.
+- Silent renewal needs you to still be signed in to Google in Chrome; Google gives no refresh token without a client secret. If you signed out of Google, Chrome clears cookies when it closes, or access was revoked in your Google account, the popup says which and asks you to click **Connect Gmail** once. **Disconnect locally** stops the renewal.
+- Account checks and inbox reads retry once with a fresh token when Google rejects an expired one. Sending is still never retried automatically.
+- After updating to this version, click **Connect Gmail** once more; from then on the connection persists.
+
 ## v1.54.1 — Connection-note fixes
 - The note buttons now detect LinkedIn’s invitation box more reliably (by placeholder / dialog), and only inside the invitation dialog.
 - Notes are capped to the field’s real limit (200 for free LinkedIn) and the AI note is told that limit, so Send no longer rejects an over-long note.
