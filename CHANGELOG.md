@@ -2,6 +2,12 @@
 
 All notable changes are listed newest first. Versions match `manifest.json`.
 
+## v1.55.0 — Gemini browser session sends on its own again
+- **Fixed:** with **Gemini (browser session)**, the prompt was typed into the Gemini tab but never sent until you opened that tab and pressed Send. Gemini's current page ignores Send in a tab that loaded in the background without ever being shown, so the Gemini tab now comes to the front just long enough to send, then switches you back to the tab you were on. The reply is still read in the background.
+- That tab switch closes the popup. The analysis keeps running and its result is saved, so reopen the popup to see it. A popup **ATS check** with Gemini is saved the same way.
+- More reliable Send: the extension waits for Gemini's Send button to be enabled, clicks the real button (not its wrapper), checks the prompt actually went out, and retries with Enter if it didn't.
+- The popup header and the Settings title now show the installed version (e.g. **v1.55.0**), so you can confirm a reload picked up the new build.
+
 ## v1.54.1 — Connection-note fixes
 - The note buttons now detect LinkedIn’s invitation box more reliably (by placeholder / dialog), and only inside the invitation dialog.
 - Notes are capped to the field’s real limit (200 for free LinkedIn) and the AI note is told that limit, so Send no longer rejects an over-long note.

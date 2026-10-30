@@ -17,6 +17,9 @@ Analyze opens a pinned background tab, types in your résumé + the job, submits
 structured JSON reply back into the popup.
 
 - Keep the popup open while it runs (up to ~2 minutes).
+- **Gemini** won't send a prompt from a tab that has never been on screen, so its tab comes to the
+  front just long enough to send, then you're switched back. That closes the popup; reopen it for
+  the result (the run keeps going and the result is saved).
 - You must be logged in to chatgpt.com / gemini.google.com in this browser.
 - This automates the consumer web UI, which is against those sites' terms of service and depends on
   their current page markup; it can break when they change their layout.

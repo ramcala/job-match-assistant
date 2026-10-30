@@ -1,5 +1,6 @@
 const defaultProfile = `Alex Carter — Software Engineer. 5+ years building web and backend applications. Skills: JavaScript, TypeScript, Python, React, Node.js, SQL, REST APIs, Git, Docker, AWS, CI/CD, testing and agile delivery. This is placeholder text — replace it with your own résumé in Settings.`;
 const el = id => document.getElementById(id);
+{ const v = chrome.runtime.getManifest?.().version; if (v && el('appVersion')) el('appVersion').textContent = `v${v}`; }
 function currentModel() {
   const value=el('model').value==='__custom__'?el('customModel').value.trim():el('model').value;
   if(!value || /\s/.test(value)) throw new Error('Enter a model ID without spaces.');

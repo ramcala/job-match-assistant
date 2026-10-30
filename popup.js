@@ -1,4 +1,6 @@
 const $ = id => document.getElementById(id);
+// Show the loaded build so a reload can be confirmed at a glance.
+{ const v = chrome.runtime.getManifest?.().version; if (v && $('appVersion')) $('appVersion').textContent = ` · v${v}`; }
 async function initModeSelector() {
   const s = await chrome.storage.local.get(['analysisMode','apiKey']);
   $('analysisModeSelect').value = s.analysisMode || (s.apiKey ? 'openai' : 'local');
@@ -132,7 +134,9 @@ async function analyzeJob(job, statusId) {
       currentResult = response.result;
     } else if (mode === 'chatgpt-browser' || mode === 'gemini-browser') {
       const provider = mode === 'chatgpt-browser' ? 'chatgpt' : 'gemini';
-      $(statusId).textContent = `Opening ${provider === 'chatgpt' ? 'ChatGPT' : 'Gemini'} and analyzing… this can take up to two minutes. Keep this popup open — closing it will lose the result.`;
+      $(statusId).textContent = provider === 'chatgpt'
+        ? 'Opening ChatGPT and analyzing… this can take up to two minutes. Keep this popup open — closing it will lose the result.'
+        : 'Opening Gemini… its tab comes to the front just long enough to send the prompt (this closes the popup), then you’re brought back. Reopen the popup in a minute or two for the result.';
       const response = await chrome.runtime.sendMessage({ type:'BROWSER_ANALYZE', payload:{ job, profile, provider, storageKey: currentPostKey, candidateName } });
       if (!response.ok) throw new Error(response.error);
       currentResult = response.result;
@@ -636,7 +640,7 @@ async function runAtsPopup(){
   if(mode==='openai'){ if(!cfg.apiKey){ box.textContent='Add an OpenAI key or pick ChatGPT/Gemini in Analyze with.'; return; } payload={provider:'openai',apiKey:cfg.apiKey,model:cfg.model,text}; }
   else if(mode==='chatgpt-browser'||mode==='gemini-browser'){ payload={provider:mode==='chatgpt-browser'?'chatgpt':'gemini',text}; }
   else { box.textContent='Local mode can\'t score ATS — pick OpenAI or ChatGPT/Gemini in Analyze with.'; return; }
-  if(btn) btn.disabled=true; box.textContent='Scoring… keep this popup open.';
+  if(btn) btn.disabled=true; box.textContent=payload.provider==='gemini'?'Scoring… Gemini comes to the front briefly (closing this popup); reopen it for the score.':'Scoring… keep this popup open.';
   try{
     const resp=await chrome.runtime.sendMessage({type:'ATS_SCORE',...payload});
     if(!resp||!resp.ok) throw new Error(resp&&resp.error||'ATS check failed.');
