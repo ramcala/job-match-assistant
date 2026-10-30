@@ -1,6 +1,7 @@
 // Loaded only in the service worker. Tokens never leave Chrome Identity / this worker.
 const gmailScope='https://www.googleapis.com/auth/gmail.send';
 const gmailReadScope='https://www.googleapis.com/auth/gmail.readonly';
+const gmailScopes=[gmailScope,gmailReadScope,'https://www.googleapis.com/auth/userinfo.email','https://www.googleapis.com/auth/userinfo.profile'];
 const gmailLocks=new Set();
 async function gmailToken(interactive=false) {
   const {gmailClientId}=await chrome.storage.local.get('gmailClientId');
@@ -14,9 +15,11 @@ async function gmailToken(interactive=false) {
 }
 let gmailAuthBusy=false;
 let gmailAuthGeneration=0;
+let gmailRestore=null;
 async function clearGmailAuth() {
   gmailAuthGeneration++;
   await chrome.storage.session.remove('gmailAuth');
+  await chrome.storage.local.remove('gmailConnection');
   await chrome.identity.clearAllCachedAuthTokens();
 }
 async function invalidateGmailToken(token) {
@@ -30,38 +33,80 @@ async function saveGmailClient(value) {
   await chrome.storage.local.set({gmailClientId:client});
   return {saved:true};
 }
+// A Web client gets ~1-hour access tokens from Google's implicit flow; a refresh token would need a client secret.
+// The token lives in session storage, which Chrome wipes when the browser closes, so an expired or missing token
+// is renewed silently (prompt=none) for the account remembered in gmailConnection.
 async function savedClientToken(client,interactive) {
   const {gmailAuth}=await chrome.storage.session.get('gmailAuth');
   if(!interactive&&gmailAuth?.client===client&&gmailAuth.expiresAt>Date.now()+60000)return gmailAuth.token;
-  if(!interactive)throw new Error('Connect Gmail in Settings. Your connection may have expired; the saved client ID is retained.');
+  if(!interactive)return restoreClientToken(client);
   if(gmailAuthBusy)throw new Error('Google sign-in is already in progress.');
-  gmailAuthBusy=true;const generation=gmailAuthGeneration;
-  try {
-    const redirect=chrome.identity.getRedirectURL('gmail');
-    const state=crypto.randomUUID();
-    const auth=new URL('https://accounts.google.com/o/oauth2/v2/auth');
-    auth.search=new URLSearchParams({client_id:client,redirect_uri:redirect,response_type:'token',scope:gmailScope+' '+gmailReadScope+' https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',state,prompt:'select_account consent'}).toString();
-    const result=await chrome.identity.launchWebAuthFlow({url:auth.href,interactive:true});
-    if(!result)throw new Error('Google sign-in was cancelled.');
-    const callback=new URL(result),expected=new URL(redirect),params=new URLSearchParams(callback.hash.slice(1));
-    if(callback.origin!==expected.origin||callback.pathname!==expected.pathname||callback.search||params.get('state')!==state)throw new Error('Google sign-in response validation failed.');
-    if(params.has('error'))throw new Error('Google authorization was declined or failed. Check your client setup and try Connect Gmail again.');
-    const token=params.get('access_token'),seconds=Number(params.get('expires_in'));
-    if(!token||params.get('token_type')?.toLowerCase()!=='bearer'||!Number.isFinite(seconds)||seconds<=0)throw new Error('Google returned an invalid token response.');
-    if(!params.get('scope')?.split(' ').includes(gmailScope))throw new Error('Gmail send permission was not granted. Reconnect in Settings.');
-    const current=await chrome.storage.local.get('gmailClientId');
-    if(generation!==gmailAuthGeneration||current.gmailClientId!==client)throw new Error('Connection settings changed. Connect Gmail again.');
-    await chrome.storage.session.set({gmailAuth:{client,token,expiresAt:Date.now()+Math.min(seconds,86400)*1000}});
-    return token;
-  } finally {gmailAuthBusy=false;}
+  gmailAuthBusy=true;
+  try {return await googleAuthFlow(client,true);}
+  finally {gmailAuthBusy=false;}
 }
-async function gmailAccount(interactive=false) {
+// Works while this Chrome profile is still signed in to Google and the grant stands; concurrent callers share one attempt.
+function restoreClientToken(client) {
+  gmailRestore??=(async()=>{
+    const {gmailConnection}=await chrome.storage.local.get('gmailConnection');
+    if(gmailConnection?.client!==client)throw new Error('Connect Gmail in Settings.');
+    if(gmailAuthBusy)throw new Error('Google sign-in is already in progress.');
+    const generation=gmailAuthGeneration;
+    try {return await googleAuthFlow(client,false,gmailConnection);}
+    catch(error) {
+      const code=error.googleError;
+      if(code==='consent_required'||code==='access_denied') {
+        if(generation===gmailAuthGeneration&&!gmailAuthBusy)await chrome.storage.local.remove('gmailConnection');
+        throw new Error('Google access for this extension was revoked or has expired. Click Connect Gmail to approve it again.');
+      }
+      if(code==='login_required')throw new Error('Gmail could not reconnect automatically because Google needs you to sign in again (you signed out of Google, or Chrome clears cookies when it closes). Click Connect Gmail.');
+      if(code)throw new Error('Gmail could not reconnect automatically because Google needs you to confirm your account. Click Connect Gmail.');
+      throw new Error(`Gmail could not reconnect automatically (${error.message.replace(/\.$/,'')}). Click Connect Gmail.`);
+    }
+  })().finally(()=>{gmailRestore=null;});
+  return gmailRestore;
+}
+async function googleAuthFlow(client,interactive,remembered) {
+  const generation=gmailAuthGeneration;
+  const redirect=chrome.identity.getRedirectURL('gmail');
+  const state=crypto.randomUUID();
+  const auth=new URL('https://accounts.google.com/o/oauth2/v2/auth');
+  // Silent renewal asks only for scopes already granted ('email'/'profile' are Google's aliases), so there is nothing new to approve.
+  const granted=!interactive&&remembered?.scope?remembered.scope.split(' '):null;
+  const scope=gmailScopes.filter(s=>!granted||granted.includes(s)||granted.includes(s.split('userinfo.')[1])).join(' ');
+  auth.search=new URLSearchParams({client_id:client,redirect_uri:redirect,response_type:'token',scope,state,prompt:interactive?'select_account consent':'none',...(!interactive&&remembered?.email?{login_hint:remembered.email}:{})}).toString();
+  // Non-interactive: let Google's redirects finish in the hidden page instead of stopping at the first page load.
+  const result=await chrome.identity.launchWebAuthFlow(interactive?{url:auth.href,interactive:true}:{url:auth.href,interactive:false,abortOnLoadForNonInteractive:false,timeoutMsForNonInteractive:10000});
+  if(!result)throw new Error('Google sign-in was cancelled.');
+  const callback=new URL(result),expected=new URL(redirect),params=new URLSearchParams(callback.hash.slice(1));
+  if(callback.origin!==expected.origin||callback.pathname!==expected.pathname||callback.search||params.get('state')!==state)throw new Error('Google sign-in response validation failed.');
+  if(params.has('error'))throw Object.assign(new Error('Google authorization was declined or failed. Check your client setup and try Connect Gmail again.'),{googleError:params.get('error')});
+  const token=params.get('access_token'),seconds=Number(params.get('expires_in')),grantedScope=params.get('scope');
+  if(!token||params.get('token_type')?.toLowerCase()!=='bearer'||!Number.isFinite(seconds)||seconds<=0)throw new Error('Google returned an invalid token response.');
+  if(!grantedScope?.split(' ').includes(gmailScope))throw new Error('Gmail send permission was not granted. Reconnect in Settings.');
+  const current=await chrome.storage.local.get('gmailClientId');
+  if(generation!==gmailAuthGeneration||current.gmailClientId!==client)throw new Error('Connection settings changed. Connect Gmail again.');
+  await chrome.storage.session.set({gmailAuth:{client,token,scope:grantedScope,expiresAt:Date.now()+Math.min(seconds,86400)*1000}});
+  return token;
+}
+// Local storage keeps only a non-secret marker (client, verified address, granted scopes; never the token), which is
+// what lets the connection survive a browser restart. Disconnect or a revoked grant removes it.
+async function rememberGmailConnection(token,email,generation) {
+  const {gmailAuth}=await chrome.storage.session.get('gmailAuth');
+  if(gmailAuth?.token!==token||!gmailAuth.scope)return;
+  const {gmailConnection}=await chrome.storage.local.get('gmailConnection');
+  if(gmailConnection?.client===gmailAuth.client&&gmailConnection.email===email&&gmailConnection.scope===gmailAuth.scope)return;
+  if(generation===gmailAuthGeneration)await chrome.storage.local.set({gmailConnection:{client:gmailAuth.client,email,scope:gmailAuth.scope}});
+}
+async function gmailAccount(interactive=false,retry=!interactive) {
+  const generation=gmailAuthGeneration;
   const token=await gmailToken(interactive);
   const response=await fetch('https://www.googleapis.com/oauth2/v2/userinfo',{headers:{Authorization:`Bearer ${token}`},signal:AbortSignal.timeout(15000)});
-  if(response.status===401)await invalidateGmailToken(token);
+  if(response.status===401){await invalidateGmailToken(token);if(retry)return gmailAccount(false,false);}
   if(!response.ok)throw new Error(`Cannot verify Gmail account (${response.status}). Reconnect in Settings.`);
   const account=await response.json();
   if(!account.email||account.verified_email===false)throw new Error('Could not verify the connected email address.');
+  await rememberGmailConnection(token,account.email,generation);
   return {token,email:account.email,picture:account.picture||''};
 }
 function mailAddress(value) {
@@ -195,10 +240,10 @@ function parseJobEmailLinks(html){
   return out;
 }
 if(typeof globalThis!=='undefined') globalThis.parseJobEmailLinks=parseJobEmailLinks;
-async function gmailApiGet(path){
+async function gmailApiGet(path,retry=true){
   const token=await gmailToken(false);
   const response=await fetch('https://gmail.googleapis.com/gmail/v1/users/me/'+path,{headers:{Authorization:`Bearer ${token}`},signal:AbortSignal.timeout(20000)});
-  if(response.status===401){await invalidateGmailToken(token);throw new Error('Gmail session expired. Click Connect Gmail again.');}
+  if(response.status===401){await invalidateGmailToken(token);if(retry)return gmailApiGet(path,false);throw new Error('Gmail session expired. Click Connect Gmail again.');}
   if(response.status===403)throw new Error('Gmail read permission is missing. Disconnect and Connect Gmail again to grant read access.');
   if(!response.ok)throw new Error(`Gmail read failed (HTTP ${response.status}).`);
   return response.json();

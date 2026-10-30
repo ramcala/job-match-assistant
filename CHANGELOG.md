@@ -2,6 +2,12 @@
 
 All notable changes are listed newest first. Versions match `manifest.json`.
 
+## v1.56.0 — Gmail stays connected after a restart
+- Gmail no longer disconnects every time you close and reopen Chrome (or after Google’s ~1-hour token expiry). The extension now remembers which account you connected (address and granted permissions only, never the token) and renews access silently in the background, so the badge shows your avatar and **Send email** works without clicking **Connect Gmail** again.
+- Silent renewal needs you to still be signed in to Google in Chrome; Google gives no refresh token without a client secret. If you signed out of Google, Chrome clears cookies when it closes, or access was revoked in your Google account, the popup says which and asks you to click **Connect Gmail** once. **Disconnect locally** stops the renewal.
+- Account checks and inbox reads retry once with a fresh token when Google rejects an expired one. Sending is still never retried automatically.
+- After updating to this version, click **Connect Gmail** once more; from then on the connection persists.
+
 ## v1.55.0 — Gemini browser session sends on its own again
 - **Fixed:** with **Gemini (browser session)**, the prompt was typed into the Gemini tab but never sent until you opened that tab and pressed Send. Gemini's current page ignores Send in a tab that loaded in the background without ever being shown, so the Gemini tab now comes to the front just long enough to send, then switches you back to the tab you were on. The reply is still read in the background.
 - That tab switch closes the popup. The analysis keeps running and its result is saved, so reopen the popup to see it. A popup **ATS check** with Gemini is saved the same way.
